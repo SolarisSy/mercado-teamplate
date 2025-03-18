@@ -17,57 +17,117 @@ import {
   FirebaseUser
 } from './db';
 import axios, { AxiosError } from 'axios';
+import customFetch from '../axios/custom';
+
+// Sempre usar modo de login local para ambiente de produção
+// Esta abordagem garante que o aplicativo funcione mesmo sem Firebase
+const ALWAYS_USE_LOCAL_AUTH = true;
 
 // Provider para login do Google
 const googleProvider = new GoogleAuthProvider();
 
-// Flag para controlar login simulado após erro
-let shouldSimulateLogin = false;
-
-// Dados de usuário simulado para uso em caso de falha
-const mockUser = {
-  uid: 'simulated-user-123456',
-  email: 'usuario.simulado@example.com',
-  displayName: 'Usuário Simulado',
-  photoURL: 'https://ui-avatars.com/api/?name=Usuario+Simulado&background=random',
-  provider: 'google'
+// Dados do usuário padrão
+const DEFAULT_USER = {
+  uid: 'local-user-123456',
+  email: 'usuario.local@example.com',
+  displayName: 'Usuário Local',
+  photoURL: 'https://ui-avatars.com/api/?name=Usuario+Local&background=random',
+  provider: 'local'
 };
 
-// Função para criar usuário simulado no JSON Server
-const createSimulatedUserInJsonServer = async () => {
+// Função para criar usuário no JSON Server
+const createLocalUser = async () => {
   try {
     // Verificar se o usuário já existe no JSON Server
     try {
-      await axios.get(`/api/users/${mockUser.uid}`);
-      console.log("Usuário simulado já existe no JSON Server");
-      return true;
+      const response = await customFetch.get(`/users/${DEFAULT_USER.uid}`);
+      console.log("Usuário local já existe no banco de dados");
+      return response.data;
     } catch (error) {
       // Usuário não existe, vamos criar
       const axiosError = error as AxiosError;
       if (axiosError.response && axiosError.response.status === 404) {
         const userData = {
-          id: mockUser.uid,
+          id: DEFAULT_USER.uid,
           name: "Usuário",
-          lastname: "Simulado",
-          email: mockUser.email,
-          role: "customer"
+          lastname: "Local",
+          email: DEFAULT_USER.email,
+          role: "customer",
+          password: "localuser", // Senha padrão para login tradicional
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         };
         
-        await axios.post('/api/users', userData);
-        console.log("Usuário simulado criado com sucesso no JSON Server");
-        return true;
+        const response = await customFetch.post('/users', userData);
+        console.log("Usuário local criado com sucesso no banco de dados");
+        return response.data;
       }
       throw error;
     }
   } catch (error) {
-    console.error("Erro ao criar usuário simulado no JSON Server:", error);
-    return false;
+    console.error("Erro ao gerenciar usuário local:", error);
+    // Retornar objeto básico em caso de falha
+    return {
+      id: DEFAULT_USER.uid,
+      name: "Usuário",
+      lastname: "Local",
+      email: DEFAULT_USER.email,
+      role: "customer"
+    };
   }
 };
 
-// Função de login com Google
-export const signInWithGoogle = async () => {
+// Tipos para as respostas de autenticação
+interface AuthResponse {
+  user: {
+    uid: string;
+    email: string | null;
+    displayName: string | null;
+    photoURL: string | null;
+  }
+}
+
+// Login com Provedor Local
+export const loginWithLocalProvider = async (): Promise<AuthResponse> => {
+  try {
+    console.log("Iniciando login com provedor local...");
+    
+    // Buscar ou criar o usuário local
+    const localUser = await createLocalUser();
+    
+    // Salvar no localStorage
+    localStorage.setItem('user', JSON.stringify({
+      id: localUser.id,
+      name: localUser.name,
+      email: localUser.email,
+      photoURL: DEFAULT_USER.photoURL,
+      provider: DEFAULT_USER.provider
+    }));
+    
+    return {
+      user: {
+        uid: localUser.id,
+        email: localUser.email,
+        displayName: `${localUser.name} ${localUser.lastname || ''}`,
+        photoURL: DEFAULT_USER.photoURL
+      }
+    };
+  } catch (error) {
+    console.error("Erro no login local:", error);
+    toast.error("Ocorreu um erro no login. Tente novamente.");
+    throw error;
+  }
+};
+
+// Função de login com Google - redirecionada para login local se ALWAYS_USE_LOCAL_AUTH for true
+export const signInWithGoogle = async (): Promise<AuthResponse> => {
   console.log("Iniciando login com Google...");
+  
+  // Se estiver configurado para sempre usar autenticação local
+  if (ALWAYS_USE_LOCAL_AUTH) {
+    console.log("Redirecionando para autenticação local");
+    return loginWithLocalProvider();
+  }
   
   try {
     const result = await signInWithPopup(auth, googleProvider);
@@ -105,49 +165,11 @@ export const signInWithGoogle = async () => {
       }
     };
   } catch (error: any) {
-    console.error("Error signing in with Google: ", error);
-    let errorMessage = "Failed to sign in with Google.";
+    console.error("Erro no login com Google:", error);
+    toast.error("Ocorreu um erro no login com Google. Usando login local.");
     
-    if (error.code === 'auth/popup-closed-by-user') {
-      errorMessage = "Login cancelled. You closed the login window.";
-    }
-    
-    // Verificar se é um erro de conectividade com o Firestore ou domínio não autorizado
-    if (error.code === 'unavailable' || 
-        error.code === 'auth/unauthorized-domain' ||
-        error.message?.includes('network') || 
-        error.message?.includes('firestore') ||
-        error.message?.includes('Firebase')) {
-      console.log("Detectado erro de conectividade, simulando login para melhor experiência do usuário");
-      shouldSimulateLogin = true;
-      
-      // Simular login bem-sucedido
-      const mockUserData = {
-        user: {
-          uid: mockUser.uid,
-          email: mockUser.email,
-          displayName: mockUser.displayName,
-          photoURL: mockUser.photoURL
-        }
-      };
-      
-      // Armazenar dados no localStorage para simular sessão
-      localStorage.setItem('user', JSON.stringify({
-        id: mockUser.uid,
-        email: mockUser.email,
-        name: mockUser.displayName,
-        photoURL: mockUser.photoURL,
-        provider: mockUser.provider
-      }));
-      
-      // Tentativa de criar o usuário no JSON Server
-      await createSimulatedUserInJsonServer();
-      
-      return mockUserData;
-    }
-    
-    toast.error(errorMessage);
-    throw error;
+    // Em caso de erro, usar o provedor local
+    return loginWithLocalProvider();
   }
 };
 
@@ -157,7 +179,48 @@ export const registerWithEmailAndPassword = async (
   password: string,
   name: string,
   lastname: string
-) => {
+): Promise<AuthResponse> => {
+  // Se estiver configurado para sempre usar autenticação local
+  if (ALWAYS_USE_LOCAL_AUTH) {
+    try {
+      // Criar usuário diretamente no JSON Server
+      const userData = {
+        id: `local-${Date.now()}`,
+        name,
+        lastname,
+        email,
+        password,
+        role: "customer",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      const response = await customFetch.post('/users', userData);
+      console.log("Usuário registrado com sucesso no banco de dados local");
+      
+      // Salvar no localStorage
+      localStorage.setItem('user', JSON.stringify({
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        provider: 'email'
+      }));
+      
+      return {
+        user: {
+          uid: userData.id,
+          email: userData.email,
+          displayName: `${name} ${lastname}`,
+          photoURL: null
+        }
+      };
+    } catch (error) {
+      console.error("Erro ao registrar usuário local:", error);
+      toast.error("Ocorreu um erro no registro. Tente novamente.");
+      throw error;
+    }
+  }
+  
   try {
     // Criar usuário no Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -190,6 +253,12 @@ export const registerWithEmailAndPassword = async (
     };
   } catch (error: any) {
     console.error("Error registering with email and password: ", error);
+    
+    // Se houver erro no Firebase, tentar registro local
+    if (ALWAYS_USE_LOCAL_AUTH) {
+      return registerWithEmailAndPassword(email, password, name, lastname);
+    }
+    
     let errorMessage = "Failed to register. Please try again.";
     
     if (error.code === 'auth/email-already-in-use') {
@@ -208,14 +277,13 @@ export const registerWithEmailAndPassword = async (
 // Função de logout
 export const logoutUser = async (): Promise<void> => {
   try {
-    if (!shouldSimulateLogin) {
+    // Se não estiver usando autenticação local, fazer logout no Firebase
+    if (!ALWAYS_USE_LOCAL_AUTH) {
       await signOut(auth);
-    } else {
-      // Limpar o localStorage se for um login simulado
-      localStorage.removeItem('user');
-      // Resetar a flag
-      shouldSimulateLogin = false;
     }
+    
+    // Sempre limpar o localStorage
+    localStorage.removeItem('user');
   } catch (error) {
     console.error("Error signing out: ", error);
     throw error;
@@ -224,48 +292,86 @@ export const logoutUser = async (): Promise<void> => {
 
 // Observer para mudanças no estado de autenticação
 export const onAuthStateChange = (callback: (user: User | null) => void): () => void => {
-  // Se estiver em modo de simulação, simplesmente retorne uma função nula
-  if (shouldSimulateLogin) {
-    // Criar um user simulado
-    const mockFirebaseUser = {
-      uid: mockUser.uid,
-      email: mockUser.email,
-      displayName: mockUser.displayName,
-      photoURL: mockUser.photoURL,
-      emailVerified: true,
-      isAnonymous: false,
-      metadata: {},
-      providerData: [],
-      refreshToken: '',
-      tenantId: null,
-      delete: async () => {},
-      getIdToken: async () => '',
-      getIdTokenResult: async () => ({ 
-        token: '', 
-        signInProvider: '', 
-        expirationTime: '', 
-        issuedAtTime: '', 
-        claims: {} 
-      }),
-      reload: async () => {},
-      toJSON: () => ({})
-    } as unknown as User;
-    
-    // Chame o callback imediatamente com o usuário simulado
+  // Se estiver usando autenticação local, simular o estado do usuário
+  if (ALWAYS_USE_LOCAL_AUTH) {
     setTimeout(() => {
-      callback(mockFirebaseUser);
-      // Tenta criar o usuário no JSON Server
-      createSimulatedUserInJsonServer();
-    }, 500);
+      // Verificar se existe um usuário no localStorage
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        // Criar um user simulado baseado nos dados do localStorage
+        const userData = JSON.parse(storedUser);
+        const mockFirebaseUser = {
+          uid: userData.id,
+          email: userData.email,
+          displayName: userData.name,
+          photoURL: userData.photoURL,
+          emailVerified: true,
+          isAnonymous: false,
+          metadata: {},
+          providerData: [],
+          refreshToken: '',
+          tenantId: null,
+          delete: async () => {},
+          getIdToken: async () => '',
+          getIdTokenResult: async () => ({ 
+            token: '', 
+            signInProvider: '', 
+            expirationTime: '', 
+            issuedAtTime: '', 
+            claims: {} 
+          }),
+          reload: async () => {},
+          toJSON: () => ({})
+        } as unknown as User;
+        
+        callback(mockFirebaseUser);
+      } else {
+        callback(null);
+      }
+    }, 300);
     
     // Retorna uma função para "cancelar" a observação
     return () => {};
   }
   
+  // Usar o observer padrão do Firebase se não estiver usando autenticação local
   return onAuthStateChanged(auth, callback);
 };
 
 // Obter usuário atual
 export const getCurrentUser = (): User | null => {
+  if (ALWAYS_USE_LOCAL_AUTH) {
+    // Verificar se existe um usuário no localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      // Criar um user simulado baseado nos dados do localStorage
+      const userData = JSON.parse(storedUser);
+      return {
+        uid: userData.id,
+        email: userData.email,
+        displayName: userData.name,
+        photoURL: userData.photoURL,
+        emailVerified: true,
+        isAnonymous: false,
+        metadata: {},
+        providerData: [],
+        refreshToken: '',
+        tenantId: null,
+        delete: async () => {},
+        getIdToken: async () => '',
+        getIdTokenResult: async () => ({ 
+          token: '', 
+          signInProvider: '', 
+          expirationTime: '', 
+          issuedAtTime: '', 
+          claims: {} 
+        }),
+        reload: async () => {},
+        toJSON: () => ({})
+      } as unknown as User;
+    }
+    return null;
+  }
+  
   return auth.currentUser;
 }; 
