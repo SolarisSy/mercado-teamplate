@@ -298,8 +298,8 @@ Operações:
    ```
 
 3. **Configuração**:
-   - O frontend estará disponível na porta 80
-   - A API estará disponível na porta 3000 (apenas em ambiente de desenvolvimento)
+   - O frontend estará disponível na porta 8080
+   - A API estará disponível na porta 3001 (apenas em ambiente de desenvolvimento)
 
 ## 6. Estrutura de Dados
 
