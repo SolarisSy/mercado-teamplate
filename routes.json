@@ -5,9 +5,13 @@
   "/orders": "/orders",
   "/users": "/users",
   "/users/:id": "/users/:id",
+  "/carousel": "/carousel",
+  "/carousel/:id": "/carousel/:id",
   "/api/categories": "/categories",
   "/api/products": "/products",
   "/api/orders": "/orders",
   "/api/users": "/users",
-  "/api/users/:id": "/users/:id"
+  "/api/users/:id": "/users/:id",
+  "/api/carousel": "/carousel",
+  "/api/carousel/:id": "/carousel/:id"
 } 

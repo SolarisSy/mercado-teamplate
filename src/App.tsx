@@ -21,6 +21,7 @@ import { loader as singleOrderLoader } from "./pages/SingleOrderHistory";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { CategoryProvider } from "./context/CategoryContext";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import DashboardHome from "./pages/admin/DashboardHome";
@@ -28,6 +29,9 @@ import ProductsList from "./pages/admin/ProductsList";
 import ProductForm from "./pages/admin/ProductForm";
 import ProductView from "./pages/admin/ProductView";
 import CategoriesManager from "./pages/admin/CategoriesManager";
+import CarouselManager from "./pages/admin/CarouselManager";
+import { AuthProvider } from "./context/AuthContext";
+import { Toaster } from 'react-hot-toast';
 
 const router = createBrowserRouter([
   {
@@ -57,7 +61,11 @@ const router = createBrowserRouter([
       },
       {
         path: "checkout",
-        element: <Checkout />,
+        element: (
+          <ProtectedRoute>
+            <Checkout />
+          </ProtectedRoute>
+        ),
         action: checkoutAction,
       },
       {
@@ -75,20 +83,36 @@ const router = createBrowserRouter([
       },
       {
         path: "order-confirmation",
-        element: <OrderConfirmation />,
+        element: (
+          <ProtectedRoute>
+            <OrderConfirmation />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "user-profile",
-        element: <UserProfile />,
+        element: (
+          <ProtectedRoute>
+            <UserProfile />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "order-history",
-        element: <OrderHistory />,
+        element: (
+          <ProtectedRoute>
+            <OrderHistory />
+          </ProtectedRoute>
+        ),
         loader: orderHistoryLoader,
       },
       {
         path: "order-history/:id",
-        element: <SingleOrderHistory />,
+        element: (
+          <ProtectedRoute>
+            <SingleOrderHistory />
+          </ProtectedRoute>
+        ),
         loader: singleOrderLoader
       },
     ],
@@ -130,17 +154,24 @@ const router = createBrowserRouter([
         path: "categories",
         element: <CategoriesManager />,
       },
+      {
+        path: "carousel",
+        element: <CarouselManager />,
+      },
     ],
   },
 ]);
 
 function App() {
   return (
-    <AdminAuthProvider>
-      <CategoryProvider>
-        <RouterProvider router={router} />
-      </CategoryProvider>
-    </AdminAuthProvider>
+    <AuthProvider>
+      <AdminAuthProvider>
+        <CategoryProvider>
+          <Toaster position="top-center" />
+          <RouterProvider router={router} />
+        </CategoryProvider>
+      </AdminAuthProvider>
+    </AuthProvider>
   );
 }
 

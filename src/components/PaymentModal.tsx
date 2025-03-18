@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { paymentService } from '../services/paymentService';
+import { useAppDispatch } from '../hooks';
+import { clearCart } from '../features/cart/cartSlice';
 
 // Importar QRCode corretamente usando a exportação nomeada
 import { QRCodeSVG } from 'qrcode.react';
@@ -27,15 +28,18 @@ interface PaymentModalProps {
 const PaymentModal: React.FC<PaymentModalProps> = ({
   isOpen,
   onClose,
-  cartItems,
-  totalAmount
+  cartItems = [],
+  totalAmount = 0
 }) => {
   const [step, setStep] = useState<'personal-data' | 'payment'>('personal-data');
   const [isLoading, setIsLoading] = useState(false);
   const [pixCode, setPixCode] = useState<string>('');
   const [qrCodeString, setQrCodeString] = useState<string>('');
+  // Armazenar uma cópia local dos itens do carrinho para uso após o pagamento
+  const [localCartItems, setLocalCartItems] = useState<CartItem[]>([]);
+  const [localTotalAmount, setLocalTotalAmount] = useState(0);
   const modalRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
   // Dados do formulário
   const [formData, setFormData] = useState({
@@ -44,6 +48,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     phone: '',
     email: '',
   });
+
+  // Quando o modal abrir, salvar os dados do carrinho localmente
+  useEffect(() => {
+    if (isOpen && Array.isArray(cartItems)) {
+      setLocalCartItems([...cartItems]);
+      setLocalTotalAmount(totalAmount);
+    }
+  }, [isOpen, cartItems, totalAmount]);
 
   // Fechar o modal quando clicar fora dele
   useEffect(() => {
@@ -128,6 +140,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     setIsLoading(true);
     
     try {
+      console.log('Gerando PIX com os dados:', { 
+        fullName: formData.fullName,
+        email: formData.email,
+        cpf: formData.cpf 
+      });
+      
       // Preparar dados do cliente
       const customerData = {
         name: formData.fullName,
@@ -136,12 +154,21 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         phone_number: formData.phone.replace(/[^\d]/g, '')
       };
 
+      // Verificar se cartItems é válido
+      if (!Array.isArray(cartItems) || cartItems.length === 0) {
+        toast.error('Seu carrinho está vazio');
+        setIsLoading(false);
+        return;
+      }
+
       // Gerar PIX
       const pixData = await paymentService.generatePixPayment(
         customerData,
         cartItems,
         totalAmount
       );
+
+      console.log('PIX gerado com sucesso:', pixData);
 
       // Atualizar estado com os dados do PIX
       setQrCodeString(pixData.qrCodeString);
@@ -182,17 +209,23 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Registrar a venda
-      await paymentService.registerSale(totalAmount, 'Compra Fashion Shop');
+      await paymentService.registerSale(localTotalAmount, 'Compra Fashion Shop');
       
-      toast.success('Pagamento confirmado com sucesso!');
+      // Limpar o carrinho
+      dispatch(clearCart());
       
-      // Fechar o modal e redirecionar
+      toast.success('Pedido realizado com sucesso!');
+      
+      // Fechar o modal primeiro
       onClose();
-      navigate('/order-confirmation');
+      
+      // Redirecionamento direto para a página inicial após um curto delay
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
     } catch (error) {
       console.error('Erro ao confirmar pagamento:', error);
       toast.error('Erro ao confirmar pagamento. Por favor, tente novamente.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -206,13 +239,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden"
       >
         {/* Cabeçalho do Modal */}
-        <div className="bg-secondaryBrown text-white px-6 py-4 flex justify-between items-center">
+        <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
           <h3 className="text-lg font-medium">
             {step === 'personal-data' ? 'Dados Pessoais' : 'Pagamento PIX'}
           </h3>
           <button 
             onClick={onClose}
-            className="text-white hover:text-gray-200 focus:outline-none"
+            className="bg-white text-green-600 hover:bg-gray-200 w-8 h-8 flex items-center justify-center rounded-full text-xl font-bold focus:outline-none transition-colors"
           >
             &times;
           </button>
@@ -225,16 +258,20 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             <h4 className="font-medium text-gray-900 mb-2">Resumo do Pedido</h4>
             <div className="bg-gray-50 p-3 rounded">
               <div className="max-h-40 overflow-y-auto mb-2">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="flex justify-between mb-2">
-                    <span className="text-sm">
-                      {item.title} x{item.quantity}
-                    </span>
-                    <span className="text-sm font-medium">
-                      R$ {(item.price * item.quantity).toFixed(2)}
-                    </span>
-                  </div>
-                ))}
+                {Array.isArray(cartItems) && cartItems.length > 0 ? (
+                  cartItems.map((item) => (
+                    <div key={item.id} className="flex justify-between mb-2">
+                      <span className="text-sm">
+                        {item.title} x{item.quantity}
+                      </span>
+                      <span className="text-sm font-medium">
+                        R$ {(item.price * item.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">Nenhum item no carrinho</div>
+                )}
               </div>
               <div className="border-t border-gray-200 pt-2 flex justify-between">
                 <span className="font-medium">Total:</span>
@@ -309,7 +346,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               <button
                 onClick={handleGeneratePix}
                 disabled={isLoading}
-                className="w-full bg-secondaryBrown text-white py-2 px-4 rounded-md hover:bg-opacity-90 transition duration-300 disabled:opacity-50"
+                type="button"
+                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-300 disabled:opacity-50"
               >
                 {isLoading ? 'Gerando PIX...' : 'Gerar PIX Seguro'}
               </button>

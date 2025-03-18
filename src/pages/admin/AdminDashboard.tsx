@@ -6,7 +6,8 @@ import {
   HiOutlineShoppingBag, 
   HiOutlineUsers, 
   HiOutlineLogout,
-  HiOutlineTag
+  HiOutlineTag,
+  HiOutlinePhotograph
 } from 'react-icons/hi';
 
 const AdminDashboard = () => {
@@ -47,6 +48,13 @@ const AdminDashboard = () => {
           >
             <HiOutlineTag className="text-xl" />
             {isSidebarOpen && <span className="ml-3">Categorias</span>}
+          </Link>
+          <Link 
+            to="/admin/carousel" 
+            className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-200"
+          >
+            <HiOutlinePhotograph className="text-xl" />
+            {isSidebarOpen && <span className="ml-3">Carrossel</span>}
           </Link>
           <Link 
             to="/admin/users" 

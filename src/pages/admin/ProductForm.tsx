@@ -4,7 +4,7 @@ import customFetch from '../../axios/custom';
 import toast from 'react-hot-toast';
 import { nanoid } from 'nanoid';
 import { HiPlus, HiX } from 'react-icons/hi';
-import { Product, ProductColor, ProductImage, ProductSize } from '../../types/product';
+import { Product, ProductImage } from '../../types/product';
 import { uploadImages } from '../../services/imageService';
 import { useCategories } from '../../context/CategoryContext';
 
@@ -23,25 +23,26 @@ const ProductForm = () => {
   const [popularity, setPopularity] = React.useState('0');
   const [featured, setFeatured] = React.useState(true);
   
+  // Supermercado specific fields
+  const [weight, setWeight] = React.useState('');
+  const [unit, setUnit] = React.useState('unidade');
+  const [brand, setBrand] = React.useState('');
+  const [isOrganic, setIsOrganic] = React.useState(false);
+  const [expiryDate, setExpiryDate] = React.useState('');
+  const [origin, setOrigin] = React.useState('');
+  const [discount, setDiscount] = React.useState('0');
+  
+  // Nutritional Info
+  const [calories, setCalories] = React.useState('');
+  const [protein, setProtein] = React.useState('');
+  const [carbs, setCarbs] = React.useState('');
+  const [fat, setFat] = React.useState('');
+  const [sodium, setSodium] = React.useState('');
+  
   // Images
   const [images, setImages] = React.useState<ProductImage[]>([]);
   const [imageFiles, setImageFiles] = React.useState<File[]>([]);
   const [primaryImageIndex, setPrimaryImageIndex] = React.useState(0);
-  
-  // Sizes
-  const [sizes, setSizes] = React.useState<ProductSize[]>([
-    { name: 'XS', available: false },
-    { name: 'S', available: false },
-    { name: 'M', available: false },
-    { name: 'L', available: false },
-    { name: 'XL', available: false },
-    { name: 'XXL', available: false },
-  ]);
-  
-  // Colors
-  const [colors, setColors] = React.useState<ProductColor[]>([]);
-  const [newColorName, setNewColorName] = React.useState('');
-  const [newColorHex, setNewColorHex] = React.useState('#000000');
   
   const [isLoading, setIsLoading] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -64,6 +65,29 @@ const ProductForm = () => {
           setPopularity(String(product.popularity || 0));
           setFeatured(product.featured || false);
           
+          // Set supermercado specific fields
+          if (product.weight) setWeight(String(product.weight));
+          if (product.unit) setUnit(product.unit);
+          if (product.brand) setBrand(product.brand);
+          if (product.isOrganic !== undefined) setIsOrganic(product.isOrganic);
+          if (product.expiryDate) setExpiryDate(product.expiryDate);
+          if (product.origin) setOrigin(product.origin);
+          if (product.discount) setDiscount(String(product.discount));
+          
+          // Set nutritional info
+          if (product.nutritionalInfo) {
+            if (product.nutritionalInfo.calories !== undefined) 
+              setCalories(String(product.nutritionalInfo.calories));
+            if (product.nutritionalInfo.protein !== undefined) 
+              setProtein(String(product.nutritionalInfo.protein));
+            if (product.nutritionalInfo.carbs !== undefined) 
+              setCarbs(String(product.nutritionalInfo.carbs));
+            if (product.nutritionalInfo.fat !== undefined) 
+              setFat(String(product.nutritionalInfo.fat));
+            if (product.nutritionalInfo.sodium !== undefined) 
+              setSodium(String(product.nutritionalInfo.sodium));
+          }
+          
           // Set images if they exist in the expanded format
           if (product.images && Array.isArray(product.images)) {
             setImages(product.images);
@@ -75,21 +99,6 @@ const ProductForm = () => {
               url: product.image, 
               isPrimary: true 
             }]);
-          }
-          
-          // Set sizes if they exist
-          if (product.sizes && Array.isArray(product.sizes)) {
-            setSizes((prev: ProductSize[]) => {
-              return prev.map((size: ProductSize) => {
-                const foundSize = product.sizes.find((s: ProductSize) => s.name === size.name);
-                return foundSize ? { ...foundSize } : size;
-              });
-            });
-          }
-          
-          // Set colors if they exist
-          if (product.colors && Array.isArray(product.colors)) {
-            setColors(product.colors);
           }
         } catch (error) {
           toast.error('Failed to fetch product');
@@ -104,156 +113,105 @@ const ProductForm = () => {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setImageFiles((prev: File[]) => [...prev, ...files]);
+      const newFiles = Array.from(e.target.files);
       
-      // Create preview URLs
-      const newImages = files.map(file => ({
+      // Create preview URLs for immediate display
+      const newImages = newFiles.map(file => ({
         id: nanoid(),
-        url: URL.createObjectURL(file as Blob),
+        url: URL.createObjectURL(file),
         isPrimary: false
       }));
       
-      setImages((prev: ProductImage[]) => {
-        const updatedImages = [...prev, ...newImages];
-        // If this is the first image being added, make it primary
-        if (prev.length === 0) {
-          updatedImages[0].isPrimary = true;
-          setPrimaryImageIndex(0);
-        }
-        return updatedImages;
-      });
+      if (images.length === 0 && newImages.length > 0) {
+        newImages[0].isPrimary = true;
+      }
+      
+      setImages(prev => [...prev, ...newImages]);
+      setImageFiles(prev => [...prev, ...newFiles]);
     }
   };
 
   const handleRemoveImage = (index: number) => {
-    setImages((prev: ProductImage[]) => prev.filter((_, i) => i !== index));
-    setImageFiles((prev: File[]) => prev.filter((_, i) => i !== index));
+    // If removing the primary image, set another one as primary
+    if (images[index].isPrimary && images.length > 1) {
+      const newImages = [...images];
+      newImages.splice(index, 1);
+      newImages[0].isPrimary = true;
+      setImages(newImages);
+    } else {
+      setImages(prev => prev.filter((_, i) => i !== index));
+    }
     
-    // Update primary image index if necessary
-    if (index === primaryImageIndex) {
-      if (images.length > 1) {
-        setPrimaryImageIndex(0);
-      }
-    } else if (index < primaryImageIndex) {
-      setPrimaryImageIndex((prev: number) => prev - 1);
+    // Also remove from files array if it exists
+    if (index < imageFiles.length) {
+      setImageFiles(prev => prev.filter((_, i) => i !== index));
     }
   };
 
   const handleSetPrimaryImage = (index: number) => {
+    setImages(images.map((img, i) => ({ ...img, isPrimary: i === index })));
     setPrimaryImageIndex(index);
-  };
-
-  const handleSizeToggle = (index: number) => {
-    setSizes((prev: ProductSize[]) => prev.map((size: ProductSize, i: number) => 
-      i === index ? { ...size, available: !size.available } : size
-    ));
-  };
-
-  const handleAddColor = () => {
-    if (newColorName.trim() === '') {
-      toast.error('Color name is required');
-      return;
-    }
-    
-    setColors((prev: ProductColor[]) => [
-      ...prev, 
-      { 
-        name: newColorName, 
-        hex: newColorHex,
-        available: true
-      }
-    ]);
-    
-    setNewColorName('');
-    setNewColorHex('#000000');
-  };
-
-  const handleRemoveColor = (index: number) => {
-    setColors((prev: ProductColor[]) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    if (!title || !price || !category) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      // Validate form
-      if (!title || !category || !price || !stock) {
-        toast.error('Please fill all required fields');
-        setIsSubmitting(false);
-        return;
+      // Process and upload images if any new ones are added
+      let uploadedImageUrls: string[] = [];
+      if (imageFiles.length > 0) {
+        uploadedImageUrls = await uploadImages(imageFiles);
       }
       
-      // Prepare product data
-      const productData: Partial<Product> = {
+      // Combine existing images with newly uploaded ones
+      const allImages = [
+        ...images.filter(img => !img.url.startsWith('blob:')), // Keep existing remote images
+        ...uploadedImageUrls.map((url, i) => ({
+          id: nanoid(),
+          url,
+          isPrimary: images.length === 0 && i === 0 // Set as primary if it's the first image
+        }))
+      ];
+      
+      // Make sure there's a primary image
+      if (allImages.length > 0 && !allImages.some(img => img.isPrimary)) {
+        allImages[0].isPrimary = true;
+      }
+      
+      // Build the product object
+      const productData = {
         title,
         description,
         category,
-        price: Number(price),
-        stock: Number(stock),
-        popularity: Number(popularity),
+        price: parseFloat(price),
+        stock: parseInt(stock, 10),
+        popularity: parseInt(popularity, 10),
         featured,
-        sizes: sizes.filter((size: ProductSize) => size.available),
-        colors,
-        updatedAt: new Date().toISOString()
+        image: allImages.find(img => img.isPrimary)?.url || (allImages[0]?.url || ''),
+        images: allImages.length > 0 ? allImages : undefined,
+        weight: weight ? parseFloat(weight) : undefined,
+        unit,
+        brand: brand || undefined,
+        isOrganic,
+        expiryDate: expiryDate || undefined,
+        origin: origin || undefined,
+        discount: discount ? parseFloat(discount) : undefined,
+        nutritionalInfo: {
+          calories: calories ? parseFloat(calories) : undefined,
+          protein: protein ? parseFloat(protein) : undefined,
+          carbs: carbs ? parseFloat(carbs) : undefined,
+          fat: fat ? parseFloat(fat) : undefined,
+          sodium: sodium ? parseFloat(sodium) : undefined
+        }
       };
       
-      // Add createdAt for new products
-      if (!isEditMode) {
-        Object.assign(productData, { 
-          createdAt: new Date().toISOString(),
-          id: nanoid()
-        });
-      }
-      
-      // Handle images
-      if (images.length > 0) {
-        if (isEditMode) {
-          // For edit mode, use the existing image URLs and update primary status
-          Object.assign(productData, { 
-            images: images.map((img: ProductImage, index: number) => ({
-              ...img,
-              isPrimary: index === primaryImageIndex
-            })),
-            // Keep the legacy image field for backward compatibility
-            image: images[primaryImageIndex]?.url || images[0]?.url
-          });
-        } else {
-          // For new products, upload the images
-          if (imageFiles.length > 0) {
-            try {
-              // Upload images and get back URLs
-              const uploadedImageUrls = await uploadImages(imageFiles);
-              
-              const newImages = uploadedImageUrls.map((url: string, index: number) => ({
-                id: nanoid(),
-                url,
-                isPrimary: index === primaryImageIndex
-              }));
-              
-              Object.assign(productData, { 
-                images: newImages,
-                image: newImages[primaryImageIndex]?.url || newImages[0]?.url
-              });
-            } catch (error) {
-              toast.error('Failed to upload images');
-              setIsSubmitting(false);
-              return;
-            }
-          } else {
-            toast.error('At least one image is required');
-            setIsSubmitting(false);
-            return;
-          }
-        }
-      } else {
-        toast.error('At least one image is required');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Save to API
       if (isEditMode) {
         await customFetch.put(`/products/${id}`, productData);
         toast.success('Product updated successfully');
@@ -262,57 +220,54 @@ const ProductForm = () => {
         toast.success('Product created successfully');
       }
       
-      // Navigate back to products list
       navigate('/admin/products');
     } catch (error) {
-      console.error('Error saving product:', error);
       toast.error(isEditMode ? 'Failed to update product' : 'Failed to create product');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading || loadingCategories) {
-    return <div className="text-center py-10">Loading...</div>;
+  if (isLoading) {
+    return <div className="flex justify-center py-10">Loading...</div>;
   }
 
   return (
-    <div className="bg-white shadow-md rounded-md p-6">
-      <h2 className="text-2xl font-semibold mb-6">
-        {isEditMode ? 'Edit Product' : 'Create New Product'}
-      </h2>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6">{isEditMode ? 'Edit Product' : 'Add New Product'}</h1>
       
-      <form onSubmit={handleSubmit}>
-        {/* Basic Information */}
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
         <div className="mb-6">
-          <h3 className="text-lg font-medium mb-4">Basic Information</h3>
+          <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Product Title*
+              <label className="block text-gray-700 mb-1" htmlFor="title">
+                Title <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
+                id="title"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
                 value={title}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                onChange={(e) => setTitle(e.target.value)}
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category*
+              <label className="block text-gray-700 mb-1" htmlFor="category">
+                Category <span className="text-red-500">*</span>
               </label>
               <select
+                id="category"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
                 value={category}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                onChange={(e) => setCategory(e.target.value)}
                 required
               >
-                <option value="">Select Category</option>
-                {categories.map((cat: { id: string; slug: string; name: string }) => (
-                  <option key={cat.id} value={cat.slug}>
+                <option value="">Select a category</option>
+                {!loadingCategories && categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
                     {cat.name}
                   </option>
                 ))}
@@ -320,245 +275,325 @@ const ProductForm = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price ($)*
+              <label className="block text-gray-700 mb-1" htmlFor="price">
+                Price (R$) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
-                value={price}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrice(e.target.value)}
-                min="0"
+                id="price"
                 step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                min="0"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Stock*
+              <label className="block text-gray-700 mb-1" htmlFor="stock">
+                Stock Quantity
               </label>
               <input
                 type="number"
-                value={stock}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStock(e.target.value)}
+                id="stock"
                 min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={stock}
+                onChange={(e) => setStock(e.target.value)}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-gray-700 mb-1" htmlFor="popularity">
                 Popularity (0-100)
               </label>
               <input
                 type="number"
-                value={popularity}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPopularity(e.target.value)}
+                id="popularity"
                 min="0"
                 max="100"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={popularity}
+                onChange={(e) => setPopularity(e.target.value)}
               />
             </div>
             
-            <div className="flex items-center">
+            <div>
+              <label className="block text-gray-700 mb-1" htmlFor="discount">
+                Discount (%)
+              </label>
+              <input
+                type="number"
+                id="discount"
+                min="0"
+                max="100"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex items-center mt-5">
               <input
                 type="checkbox"
                 id="featured"
+                className="mr-2"
                 checked={featured}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFeatured(e.target.checked)}
-                className="h-4 w-4 text-secondaryBrown border-gray-300 rounded"
+                onChange={(e) => setFeatured(e.target.checked)}
               />
-              <label htmlFor="featured" className="ml-2 block text-sm text-gray-700">
-                Featured Product
-              </label>
+              <label htmlFor="featured">Featured Product</label>
+            </div>
+            
+            <div className="flex items-center mt-5">
+              <input
+                type="checkbox"
+                id="isOrganic"
+                className="mr-2"
+                checked={isOrganic}
+                onChange={(e) => setIsOrganic(e.target.checked)}
+              />
+              <label htmlFor="isOrganic">Organic Product</label>
             </div>
           </div>
-        </div>
-        
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Description
-          </label>
-          <textarea
-            value={description}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
-            rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-          />
-        </div>
-        
-        {/* Images Section */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium mb-4">Product Images</h3>
           
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Upload Images*
+          <div className="mt-4">
+            <label className="block text-gray-700 mb-1" htmlFor="description">
+              Description
             </label>
-            <input
-              type="file"
-              onChange={handleImageUpload}
-              multiple
-              accept="image/*"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            <textarea
+              id="description"
+              rows={5}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
-            <p className="text-sm text-gray-500 mt-1">
-              You can upload multiple images. The first image will be the primary image.
-            </p>
-          </div>
-          
-          {/* Image Previews */}
-          {images.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {images.map((image: ProductImage, index: number) => (
-                <div 
-                  key={image.id}
-                  className="relative group border border-gray-200 rounded-md overflow-hidden"
-                >
-                  <img 
-                    src={image.url} 
-                    alt={`Product ${index + 1}`}
-                    className="w-full h-40 object-cover"
-                    onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                      console.error("Error loading image:", e.currentTarget.src);
-                      e.currentTarget.src = '/placeholder-image.jpg';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity flex items-center justify-center">
-                    <button
-                      type="button"
-                      onClick={() => handleSetPrimaryImage(index)}
-                      className={`p-1 bg-white text-secondaryBrown rounded-full mx-1 ${
-                        index === primaryImageIndex ? 'opacity-0' : ''
-                      }`}
-                      title="Set as primary image"
-                    >
-                      <HiPlus className="h-5 w-5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(index)}
-                      className="p-1 bg-white text-red-500 rounded-full"
-                      title="Remove image"
-                    >
-                      <HiX className="h-5 w-5" />
-                    </button>
-                  </div>
-                  {index === primaryImageIndex && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-secondaryBrown text-white text-xs py-1 text-center">
-                      Primary
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        {/* Sizes Section */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium mb-4">Available Sizes</h3>
-          <div className="flex flex-wrap gap-3">
-            {sizes.map((size: ProductSize, index: number) => (
-              <button
-                key={size.name}
-                type="button"
-                onClick={() => handleSizeToggle(index)}
-                className={`px-4 py-2 rounded-md ${
-                  size.available 
-                    ? 'bg-secondaryBrown text-white' 
-                    : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                {size.name}
-              </button>
-            ))}
           </div>
         </div>
         
-        {/* Colors Section */}
         <div className="mb-6">
-          <h3 className="text-lg font-medium mb-4">Colors</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <h2 className="text-xl font-semibold mb-4">Product Details</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Color Name
+              <label className="block text-gray-700 mb-1" htmlFor="weight">
+                Weight/Volume
+              </label>
+              <input
+                type="number"
+                id="weight"
+                step="0.01"
+                min="0"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-gray-700 mb-1" htmlFor="unit">
+                Unit
+              </label>
+              <select
+                id="unit"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+              >
+                <option value="unidade">Unidade</option>
+                <option value="kg">Quilograma (kg)</option>
+                <option value="g">Grama (g)</option>
+                <option value="L">Litro (L)</option>
+                <option value="ml">Mililitro (ml)</option>
+                <option value="pct">Pacote</option>
+                <option value="cx">Caixa</option>
+                <option value="dz">Dúzia</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-gray-700 mb-1" htmlFor="brand">
+                Brand
               </label>
               <input
                 type="text"
-                value={newColorName}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewColorName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="e.g., Navy Blue"
+                id="brand"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Color Code
+              <label className="block text-gray-700 mb-1" htmlFor="origin">
+                Origin
               </label>
               <input
-                type="color"
-                value={newColorHex}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewColorHex(e.target.value)}
-                className="w-full h-10"
+                type="text"
+                id="origin"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-gray-700 mb-1" htmlFor="expiryDate">
+                Expiry Date
+              </label>
+              <input
+                type="date"
+                id="expiryDate"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={expiryDate}
+                onChange={(e) => setExpiryDate(e.target.value)}
               />
             </div>
           </div>
+        </div>
+        
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-4">Nutritional Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-gray-700 mb-1" htmlFor="calories">
+                Calories (kcal)
+              </label>
+              <input
+                type="number"
+                id="calories"
+                min="0"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={calories}
+                onChange={(e) => setCalories(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-gray-700 mb-1" htmlFor="protein">
+                Protein (g)
+              </label>
+              <input
+                type="number"
+                id="protein"
+                step="0.1"
+                min="0"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={protein}
+                onChange={(e) => setProtein(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-gray-700 mb-1" htmlFor="carbs">
+                Carbs (g)
+              </label>
+              <input
+                type="number"
+                id="carbs"
+                step="0.1"
+                min="0"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={carbs}
+                onChange={(e) => setCarbs(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-gray-700 mb-1" htmlFor="fat">
+                Fat (g)
+              </label>
+              <input
+                type="number"
+                id="fat"
+                step="0.1"
+                min="0"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={fat}
+                onChange={(e) => setFat(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-gray-700 mb-1" htmlFor="sodium">
+                Sodium (mg)
+              </label>
+              <input
+                type="number"
+                id="sodium"
+                min="0"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                value={sodium}
+                onChange={(e) => setSodium(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-4">Product Images</h2>
           
-          <button
-            type="button"
-            onClick={handleAddColor}
-            className="mb-4 px-4 py-2 border border-secondaryBrown text-secondaryBrown rounded-md hover:bg-secondaryBrown hover:text-white transition-colors"
-          >
-            Add Color
-          </button>
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-1">
+              Product Images <span className="text-gray-500">(First image will be the main image)</span>
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="border border-gray-300 rounded-md px-3 py-2 w-full"
+              onChange={handleImageUpload}
+            />
+          </div>
           
-          {colors.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {colors.map((color: ProductColor, index: number) => (
-                <div 
-                  key={index}
-                  className="flex items-center justify-between p-2 border border-gray-200 rounded-md"
-                >
-                  <div className="flex items-center">
-                    <div 
-                      className="w-6 h-6 rounded-full mr-2" 
-                      style={{ backgroundColor: color.hex }}
-                    />
-                    <span>{color.name}</span>
+          {images.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
+              {images.map((img, index) => (
+                <div key={img.id} className="relative group bg-gray-100 rounded-md overflow-hidden">
+                  <img
+                    src={img.url}
+                    alt={`Product ${index + 1}`}
+                    className="w-full h-40 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      className={`p-2 rounded-full ${
+                        img.isPrimary ? 'bg-green-500' : 'bg-gray-700'
+                      } text-white`}
+                      onClick={() => handleSetPrimaryImage(index)}
+                      title={img.isPrimary ? 'Primary Image' : 'Set as Primary'}
+                    >
+                      {img.isPrimary ? 'Primary' : 'Set as Primary'}
+                    </button>
+                    <button
+                      type="button"
+                      className="p-2 rounded-full bg-red-600 text-white"
+                      onClick={() => handleRemoveImage(index)}
+                      title="Remove Image"
+                    >
+                      <HiX />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveColor(index)}
-                    className="text-red-500"
-                  >
-                    <HiX />
-                  </button>
                 </div>
               ))}
             </div>
           )}
         </div>
         
-        {/* Submit Button */}
-        <div className="flex justify-end mt-8">
+        <div className="flex justify-end gap-3">
           <button
             type="button"
             onClick={() => navigate('/admin/products')}
-            className="px-4 py-2 border border-gray-300 rounded-md mr-2"
+            className="px-4 py-2 bg-gray-300 rounded-md"
           >
             Cancel
           </button>
           <button
             type="submit"
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
             disabled={isSubmitting}
-            className="bg-secondaryBrown text-white px-6 py-2 rounded-md disabled:opacity-70"
           >
-            {isSubmitting 
-              ? (isEditMode ? 'Updating...' : 'Creating...') 
-              : (isEditMode ? 'Update Product' : 'Create Product')}
+            {isSubmitting ? 'Saving...' : isEditMode ? 'Update Product' : 'Create Product'}
           </button>
         </div>
       </form>

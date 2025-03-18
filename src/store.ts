@@ -23,9 +23,21 @@ const rootReducer = combineReducers({
 // Criar o reducer persistente
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
+const preloadedState = {
+  cart: {
+    cartItems: localStorage.getItem("cartItems")
+      ? JSON.parse(localStorage.getItem("cartItems") || "[]")
+      : [],
+    totalAmount: localStorage.getItem("totalAmount")
+      ? parseFloat(localStorage.getItem("totalAmount") || "0")
+      : 0,
+  }
+};
+
 // Configurar a store com o reducer persistente
 export const store = configureStore({
   reducer: persistedReducer,
+  preloadedState,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {

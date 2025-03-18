@@ -15,22 +15,25 @@ interface Product {
   }>;
   createdAt?: string;
   updatedAt?: string;
-  sizes?: Array<{
-    name: string;
-    available: boolean;
-  }>;
-  colors?: Array<{
-    name: string;
-    hex: string;
-    available: boolean;
-  }>;
+  weight?: number;
+  unit?: string; // kg, g, ml, L, unidade
+  brand?: string;
+  isOrganic?: boolean;
+  nutritionalInfo?: {
+    calories?: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+    sodium?: number;
+  };
+  expiryDate?: string;
+  origin?: string;
+  discount?: number;
 }
 
 interface ProductInCart extends Product {
   id: string;
   quantity: number;
-  size: string;
-  color: string;
   stock: number;
 }
 
@@ -65,8 +68,20 @@ interface CartState {
     price: number;
     image: string;
     quantity: number;
-    size?: string;
-    color?: string;
+    weight?: number;
+    unit?: string;
   }>;
   totalAmount: number;
+}
+
+interface CarouselBanner {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  link: string;
+  active: boolean;
+  order?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }

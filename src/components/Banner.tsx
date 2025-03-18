@@ -1,25 +1,27 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import customFetch from "../axios/custom";
 
-const carouselData = [
+// Dados de fallback caso a API não retorne nenhum banner
+const fallbackData = [
   {
-    id: 1,
-    image: "/img/banner-promocao.jpg",
+    id: "1",
+    image: "https://images.unsplash.com/photo-1506617420156-8e4536971650?q=80&w=1200&auto=format&fit=crop",
     title: "Ofertas Imperdíveis",
     description: "Confira nossas ofertas especiais com até 50% de desconto",
     link: "/shop"
   },
   {
-    id: 2,
-    image: "/img/banner-hortifruti.jpg",
+    id: "2",
+    image: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1200&auto=format&fit=crop",
     title: "Hortifruti Fresquinho",
     description: "Frutas, legumes e verduras frescos todos os dias",
     link: "/shop/hortifruti"
   },
   {
-    id: 3,
-    image: "/img/banner-acougue.jpg",
+    id: "3",
+    image: "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?q=80&w=1200&auto=format&fit=crop",
     title: "Carnes Selecionadas",
     description: "As melhores carnes para o seu churrasco",
     link: "/shop/carnes"
@@ -28,6 +30,35 @@ const carouselData = [
 
 const Banner = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [carouselData, setCarouselData] = useState<CarouselBanner[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        setLoading(true);
+        const response = await customFetch.get("/carousel");
+        // Filtra apenas banners ativos e ordena por ordem
+        const activeBanners = (response.data || [])
+          .filter((banner: CarouselBanner) => banner.active)
+          .sort((a: CarouselBanner, b: CarouselBanner) => (a.order || 0) - (b.order || 0));
+          
+        if (activeBanners.length > 0) {
+          setCarouselData(activeBanners);
+        } else {
+          // Usa dados de fallback se não houver banners ativos
+          setCarouselData(fallbackData);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar banners:", error);
+        setCarouselData(fallbackData);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchBanners();
+  }, []);
   
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev === carouselData.length - 1 ? 0 : prev + 1));
@@ -49,6 +80,11 @@ const Banner = () => {
     return () => clearTimeout(timer);
   }, [currentSlide]);
   
+  // Se não houver dados ou estiver carregando, não mostra nada
+  if (loading || carouselData.length === 0) {
+    return null;
+  }
+  
   return (
     <section className="relative">
       <div className="carousel-container w-full relative overflow-hidden h-[400px]">
@@ -56,7 +92,7 @@ const Banner = () => {
           className="carousel-slides flex transition-transform duration-500 h-full"
           style={{ transform: `translateX(-${currentSlide * 100}%)` }}
         >
-          {carouselData.map((slide, index) => (
+          {carouselData.map((slide) => (
             <div key={slide.id} className="carousel-slide min-w-full h-full relative">
               <img 
                 src={slide.image} 
@@ -70,8 +106,8 @@ const Banner = () => {
                 <h2 className="text-4xl font-bold mb-2">{slide.title}</h2>
                 <p className="text-xl mb-6">{slide.description}</p>
                 <Link 
-                  to={slide.link} 
-                  className="bg-primary text-white px-6 py-3 rounded-md hover:bg-opacity-90 transition duration-300"
+                  to={slide.link || '/shop'} 
+                  className="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 transition duration-300"
                 >
                   Ver Ofertas
                 </Link>
@@ -98,7 +134,7 @@ const Banner = () => {
           {carouselData.map((_, index) => (
             <button 
               key={index} 
-              className={`w-3 h-3 rounded-full ${index === currentSlide ? 'bg-primary' : 'bg-white bg-opacity-50'}`}
+              className={`w-3 h-3 rounded-full ${index === currentSlide ? 'bg-green-600' : 'bg-white bg-opacity-50'}`}
               onClick={() => goToSlide(index)}
             />
           ))}

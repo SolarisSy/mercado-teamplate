@@ -267,7 +267,12 @@ const Cart = () => {
         </div>
       </div>
 
-      <PaymentModal isOpen={isPaymentModalOpen} onClose={handleClosePaymentModal} />
+      <PaymentModal 
+        isOpen={isPaymentModalOpen} 
+        onClose={handleClosePaymentModal} 
+        cartItems={cartItems} 
+        totalAmount={totalAmount} 
+      />
     </div>
   );
 };

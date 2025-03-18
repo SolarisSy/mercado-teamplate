@@ -3,6 +3,10 @@ import { Button } from "../components";
 import { checkRegisterFormData } from "../utils/checkRegisterFormData";
 import customFetch from "../axios/custom";
 import toast from "react-hot-toast";
+import { registerWithEmailAndPassword, signInWithGoogle } from "../firebase/auth";
+import { FcGoogle } from "react-icons/fc";
+import { setLoginStatus } from "../features/auth/authSlice";
+import { store } from "../store";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -16,37 +20,46 @@ const Register = () => {
     if (!checkRegisterFormData(data)) return;
 
     try {
-      // Check if user with this email already exists
-      const users = await customFetch.get("/users");
-      const userExists = users.data.some(
-        (user: { email: string }) => user.email === data.email
+      // Register with Firebase Authentication
+      await registerWithEmailAndPassword(
+        data.email as string,
+        data.password as string,
+        data.name as string,
+        data.lastname as string
       );
-      if (userExists) {
-        toast.error("User with this email already exists");
-        return;
-      }
-
-      // Generate a unique ID for the new user
-      const userId = `user${Date.now()}`;
       
-      // Register user with the generated ID
-      const response = await customFetch.post("/users", {
-        ...data,
-        id: userId,
-        role: "user",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
+      toast.success("User registered successfully! Please login.");
+      navigate("/login");
+    } catch (error) {
+      // Errors are already handled and displayed in the registerWithEmailAndPassword function
+      console.error("Registration error:", error);
+    }
+  };
 
-      if (response.status === 201) {
-        toast.success("User registered successfully");
-        navigate("/login");
-      } else {
-        toast.error("An error occurred. Please try again");
+  // Função para lidar com o login com o Google
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithGoogle();
+      
+      if (result && result.user) {
+        const { uid, email, displayName, photoURL } = result.user;
+        
+        // Salvar dados no localStorage e atualizar estado
+        localStorage.setItem("user", JSON.stringify({
+          id: uid,
+          email: email,
+          name: displayName || email?.split('@')[0],
+          photoURL: photoURL,
+          provider: "google"
+        }));
+        
+        store.dispatch(setLoginStatus(true));
+        toast.success("Login with Google successful!");
+        navigate("/user-profile");
       }
     } catch (error) {
-      console.error("Registration error:", error);
-      toast.error("Failed to register user. Please try again.");
+      console.error("Error logging in with Google:", error);
+      // A mensagem de erro já é exibida na função signInWithGoogle
     }
   };
 
@@ -102,9 +115,27 @@ const Register = () => {
           </div>
         </div>
         <Button type="submit" text="Register" mode="brown" />
+        
+        {/* Divisor ou */}
+        <div className="flex items-center w-full my-2">
+          <div className="flex-grow h-px bg-gray-300"></div>
+          <span className="px-4 text-gray-500">or</span>
+          <div className="flex-grow h-px bg-gray-300"></div>
+        </div>
+        
+        {/* Botão de login com Google */}
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-gray-300 rounded-md bg-white hover:bg-gray-50 transition"
+        >
+          <FcGoogle size={24} />
+          <span>Sign up with Google</span>
+        </button>
+        
         <Link
           to="/login"
-          className="text-xl max-md:text-lg max-[450px]:text-sm"
+          className="text-xl max-md:text-lg max-[450px]:text-sm mt-3"
         >
           Already have an account?{" "}
           <span className="text-secondaryBrown">Login now</span>.
@@ -113,4 +144,5 @@ const Register = () => {
     </div>
   );
 };
+
 export default Register;
