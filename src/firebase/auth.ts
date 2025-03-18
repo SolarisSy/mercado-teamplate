@@ -16,6 +16,7 @@ import {
   updateUserLastLogin,
   FirebaseUser
 } from './db';
+import axios, { AxiosError } from 'axios';
 
 // Provider para login do Google
 const googleProvider = new GoogleAuthProvider();
@@ -30,6 +31,38 @@ const mockUser = {
   displayName: 'Usuário Simulado',
   photoURL: 'https://ui-avatars.com/api/?name=Usuario+Simulado&background=random',
   provider: 'google'
+};
+
+// Função para criar usuário simulado no JSON Server
+const createSimulatedUserInJsonServer = async () => {
+  try {
+    // Verificar se o usuário já existe no JSON Server
+    try {
+      await axios.get(`/api/users/${mockUser.uid}`);
+      console.log("Usuário simulado já existe no JSON Server");
+      return true;
+    } catch (error) {
+      // Usuário não existe, vamos criar
+      const axiosError = error as AxiosError;
+      if (axiosError.response && axiosError.response.status === 404) {
+        const userData = {
+          id: mockUser.uid,
+          name: "Usuário",
+          lastname: "Simulado",
+          email: mockUser.email,
+          role: "customer"
+        };
+        
+        await axios.post('/api/users', userData);
+        console.log("Usuário simulado criado com sucesso no JSON Server");
+        return true;
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error("Erro ao criar usuário simulado no JSON Server:", error);
+    return false;
+  }
 };
 
 // Função de login com Google
@@ -79,8 +112,9 @@ export const signInWithGoogle = async () => {
       errorMessage = "Login cancelled. You closed the login window.";
     }
     
-    // Verificar se é um erro de conectividade com o Firestore
+    // Verificar se é um erro de conectividade com o Firestore ou domínio não autorizado
     if (error.code === 'unavailable' || 
+        error.code === 'auth/unauthorized-domain' ||
         error.message?.includes('network') || 
         error.message?.includes('firestore') ||
         error.message?.includes('Firebase')) {
@@ -105,6 +139,9 @@ export const signInWithGoogle = async () => {
         photoURL: mockUser.photoURL,
         provider: mockUser.provider
       }));
+      
+      // Tentativa de criar o usuário no JSON Server
+      await createSimulatedUserInJsonServer();
       
       return mockUserData;
     }
@@ -169,21 +206,18 @@ export const registerWithEmailAndPassword = async (
 };
 
 // Função de logout
-export const logoutUser = async () => {
-  // Se estiver em modo de simulação, apenas limpar o localStorage
-  if (shouldSimulateLogin) {
-    localStorage.removeItem('user');
-    shouldSimulateLogin = false;
-    return true;
-  }
-  
+export const logoutUser = async (): Promise<void> => {
   try {
-    await signOut(auth);
-    return true;
+    if (!shouldSimulateLogin) {
+      await signOut(auth);
+    } else {
+      // Limpar o localStorage se for um login simulado
+      localStorage.removeItem('user');
+      // Resetar a flag
+      shouldSimulateLogin = false;
+    }
   } catch (error) {
     console.error("Error signing out: ", error);
-    // Em caso de erro no logout, forçar limpeza do localStorage
-    localStorage.removeItem('user');
     throw error;
   }
 };
@@ -218,7 +252,11 @@ export const onAuthStateChange = (callback: (user: User | null) => void): () => 
     } as unknown as User;
     
     // Chame o callback imediatamente com o usuário simulado
-    setTimeout(() => callback(mockFirebaseUser), 500);
+    setTimeout(() => {
+      callback(mockFirebaseUser);
+      // Tenta criar o usuário no JSON Server
+      createSimulatedUserInJsonServer();
+    }, 500);
     
     // Retorna uma função para "cancelar" a observação
     return () => {};
