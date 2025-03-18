@@ -302,6 +302,25 @@ Operações:
    - Para deploy no Easypanel: o serviço estará disponível no domínio configurado (sem necessidade de especificar porta)
    - Em ambiente de desenvolvimento, a API estará disponível através do proxy reverso em /api
 
+### Deploy com Nixpacks (Easypanel)
+
+1. **Pré-requisitos**:
+   - Conta no Easypanel
+   - Repositório Git configurado
+
+2. **Configuração**:
+   - Arquivo `nixpacks.toml` configurado na raiz do projeto para instalar dependências e construir a aplicação
+   - Script `start.sh` para configurar o Nginx e iniciar o JSON Server
+
+3. **Como funciona**:
+   - O Nixpacks constrói a aplicação, instala o Nginx e configura-o para servir os arquivos estáticos
+   - O Nginx atua como proxy reverso para o JSON Server no caminho `/api`
+   - A aplicação ficará disponível diretamente na URL fornecida pelo Easypanel (sem necessidade de especificar porta)
+
+4. **Troubleshooting**:
+   - Se ocorrer erro "port already allocated", verifique outros projetos no Easypanel que possam estar usando as mesmas portas
+   - Para visualizar logs, use o painel de controle do Easypanel
+
 ## 6. Estrutura de Dados
 
 ### Produtos
