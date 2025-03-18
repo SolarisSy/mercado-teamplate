@@ -1,0 +1,13 @@
+{
+  "/api/*": "/$1",
+  "/categories": "/categories",
+  "/products": "/products",
+  "/orders": "/orders",
+  "/users": "/users",
+  "/users/:id": "/users/:id",
+  "/api/categories": "/categories",
+  "/api/products": "/products",
+  "/api/orders": "/orders",
+  "/api/users": "/users",
+  "/api/users/:id": "/users/:id"
+} 

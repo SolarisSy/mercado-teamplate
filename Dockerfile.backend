@@ -1,0 +1,19 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Criar diretório public necessário
+RUN mkdir -p /app/public
+
+# Copiar arquivos necessários
+COPY db.json ./
+COPY routes.json ./
+
+# Instalar json-server globalmente
+RUN npm install -g json-server@0.17.4
+
+# Expor a porta
+EXPOSE 3000
+
+# Comando para iniciar o servidor com argumentos diretos
+CMD ["json-server", "--host", "0.0.0.0", "--port", "3000", "--watch", "db.json", "--routes", "routes.json"] 

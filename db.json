@@ -1,0 +1,134 @@
+{
+  "categories": [
+    {
+      "id": "cat1",
+      "name": "Clothing",
+      "slug": "clothing",
+      "description": "All types of clothing items including shirts, pants, dresses, etc.",
+      "image": "/images/categories/clothing.jpg",
+      "displayOrder": 1,
+      "isActive": true,
+      "createdAt": "2023-01-15T10:00:00Z",
+      "updatedAt": "2023-01-15T10:00:00Z"
+    },
+    {
+      "id": "cat2",
+      "name": "Roupas Masculinas",
+      "slug": "roupas-masculinas",
+      "description": "Roupas e acessórios para homens",
+      "image": "https://images.unsplash.com/photo-1516257984-b1b4d707412e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      "bannerImage": "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+      "featured": true,
+      "order": 2,
+      "createdAt": "2023-01-15T10:00:00Z",
+      "updatedAt": "2023-01-15T10:00:00Z"
+    },
+    {
+      "id": "cat3",
+      "name": "Calçados",
+      "slug": "calcados",
+      "description": "Sapatos, tênis e sandálias para todos os estilos",
+      "image": "https://images.unsplash.com/photo-1549298916-b41d501d3772?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      "bannerImage": "https://images.unsplash.com/photo-1460353581641-37baddab0fa2?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+      "featured": false,
+      "order": 3,
+      "createdAt": "2023-01-15T10:00:00Z",
+      "updatedAt": "2023-01-15T10:00:00Z"
+    },
+    {
+      "id": "cat4",
+      "name": "Acessórios",
+      "slug": "acessorios",
+      "description": "Bolsas, joias e outros acessórios",
+      "image": "https://images.unsplash.com/photo-1584917865442-de89df76afd3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      "bannerImage": "https://images.unsplash.com/photo-1523779105320-d1cd346ff52b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+      "featured": false,
+      "order": 4,
+      "createdAt": "2023-01-15T10:00:00Z",
+      "updatedAt": "2023-01-15T10:00:00Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "prod1",
+      "name": "Camiseta Básica",
+      "slug": "camiseta-basica",
+      "description": "Camiseta básica de algodão premium",
+      "price": 49.90,
+      "categoryId": "cat1",
+      "image": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+      ],
+      "featured": true,
+      "inStock": true,
+      "createdAt": "2024-03-14T10:00:00Z",
+      "updatedAt": "2024-03-14T10:00:00Z"
+    },
+    {
+      "id": "prod2",
+      "name": "Calça Jeans Slim",
+      "slug": "calca-jeans-slim",
+      "description": "Calça jeans slim fit com lavagem moderna",
+      "price": 159.90,
+      "categoryId": "cat2",
+      "image": "https://images.unsplash.com/photo-1542272604-787c3835535d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1542272604-787c3835535d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+      ],
+      "featured": true,
+      "inStock": true,
+      "createdAt": "2024-03-14T11:00:00Z",
+      "updatedAt": "2024-03-14T11:00:00Z"
+    },
+    {
+      "id": "prod3",
+      "name": "Tênis Casual",
+      "slug": "tenis-casual",
+      "description": "Tênis casual confortável para o dia a dia",
+      "price": 199.90,
+      "categoryId": "cat3",
+      "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+      ],
+      "featured": true,
+      "inStock": true,
+      "createdAt": "2024-03-14T12:00:00Z",
+      "updatedAt": "2024-03-14T12:00:00Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "order1",
+      "userId": "user1",
+      "items": [
+        {
+          "productId": "prod1",
+          "quantity": 2,
+          "price": 49.90
+        },
+        {
+          "productId": "prod2",
+          "quantity": 1,
+          "price": 159.90
+        }
+      ],
+      "totalAmount": 259.70,
+      "status": "completed",
+      "createdAt": "2024-03-14T10:30:00Z",
+      "updatedAt": "2024-03-14T10:30:00Z"
+    }
+  ],
+  "users": [
+    {
+      "id": "user1",
+      "name": "Admin",
+      "email": "admin@example.com",
+      "role": "admin",
+      "createdAt": "2024-03-14T00:00:00Z",
+      "updatedAt": "2024-03-14T00:00:00Z"
+    }
+  ]
+} 
