@@ -1,5 +1,5 @@
 [phases.setup]
-aptPkgs = ["nginx"]
+aptPkgs = ["nginx", "curl", "procps", "findutils"]
 
 [phases.install]
 cmds = ["npm ci"]

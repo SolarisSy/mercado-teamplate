@@ -1,18 +1,57 @@
 #!/bin/bash
-set -e
 
-# Exibir informações para debug
-echo "Iniciando configuração..."
-echo "Listando diretório /app:"
-ls -la /app/
-echo "Verificando arquivos de configuração do JSON Server:"
-if [ -f /app/db.json ]; then
-  echo "db.json encontrado!"
-  cat /app/db.json | head -n 20
-else
-  echo "ERRO: db.json não encontrado!"
-  echo "Criando db.json básico..."
-  cat > /app/db.json << 'EOF'
+# Configurar o Nginx para servir os arquivos estáticos do frontend
+cat > /etc/nginx/sites-available/default << 'EOF'
+server {
+    listen 80;
+    server_name localhost;
+    
+    location / {
+        root /app/dist;
+        try_files $uri $uri/ /index.html;
+        index index.html;
+    }
+
+    location /api/ {
+        rewrite ^/api/(.*) /$1 break;
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOF
+
+# Iniciar o Nginx
+service nginx start
+
+# Verificar a localização atual
+echo "Diretório atual: $(pwd)"
+echo "Conteúdo do diretório:"
+ls -la
+
+# Verificar se o arquivo db.json existe
+if [ ! -f "/app/db.json" ]; then
+    echo "ERRO: db.json não encontrado no diretório /app"
+    echo "Tentando localizar db.json:"
+    find / -name db.json -type f 2>/dev/null
+    
+    # Se não encontrar, copiar o db.json do diretório atual para /app caso exista
+    if [ -f "db.json" ]; then
+        echo "db.json encontrado no diretório atual, copiando para /app/db.json"
+        cp db.json /app/db.json
+    fi
+fi
+
+# Verificar novamente
+if [ ! -f "/app/db.json" ]; then
+    echo "ERRO: db.json ainda não encontrado. Criando um arquivo db.json básico."
+    cat > /app/db.json << 'EOF'
 {
   "products": [],
   "categories": [],
@@ -23,13 +62,10 @@ else
 EOF
 fi
 
-if [ -f /app/routes.json ]; then
-  echo "routes.json encontrado!"
-  cat /app/routes.json
-else
-  echo "ERRO: routes.json não encontrado!"
-  echo "Criando routes.json básico..."
-  cat > /app/routes.json << 'EOF'
+# Verificar se o arquivo routes.json existe
+if [ ! -f "/app/routes.json" ]; then
+    echo "ERRO: routes.json não encontrado. Criando um arquivo routes.json básico."
+    cat > /app/routes.json << 'EOF'
 {
   "/api/*": "/$1",
   "/categories": "/categories",
@@ -50,34 +86,23 @@ else
 EOF
 fi
 
-# Criar uma versão modificada do middleware
-cat > /app/middleware.js << 'EOF'
-// Middleware simples para o JSON Server
+# Criar versão CommonJS do server.js para caso o original falhe
+echo "Criando versão CommonJS do middleware..."
+cat > /app/server-commonjs.js << 'EOF'
+const jsonServer = require('json-server');
+const server = jsonServer.create();
+const router = jsonServer.router('db.json');
+const middlewares = jsonServer.defaults();
+
+// Adicionar timestamp automático
 module.exports = (req, res, next) => {
-  // Configuração de CORS
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  
-  // Logging das requisições
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  
-  // Lidar com requisições OPTIONS (preflight)
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  if (req.method === 'POST') {
+    req.body.createdAt = new Date().toISOString();
+    req.body.updatedAt = new Date().toISOString();
   }
-  
-  // Middleware para timestamp automático
-  if ((req.method === 'POST' || req.method === 'PUT') && req.body) {
-    const timestamp = new Date().toISOString();
-    
-    if (req.method === 'POST') {
-      req.body.createdAt = timestamp;
-    }
-    
-    req.body.updatedAt = timestamp;
+  if (req.method === 'PUT' || req.method === 'PATCH') {
+    req.body.updatedAt = new Date().toISOString();
   }
-  
   next();
 };
 EOF
@@ -86,116 +111,64 @@ EOF
 echo "Instalando json-server..."
 npm install -g json-server@0.17.4
 
-# Iniciar o JSON Server em segundo plano com opções mais simples
-echo "Iniciando o JSON Server..."
-cd /app && json-server --watch db.json --routes routes.json --host 0.0.0.0 --port 3000 --middlewares middleware.js > /tmp/json-server.log 2>&1 &
+# Iniciar o JSON Server com middleware simplificado
+echo "Iniciando JSON Server com middleware CommonJS..."
+cd /app
+json-server --host 0.0.0.0 --port 3000 --watch db.json --routes routes.json --middlewares ./server-commonjs.js > /var/log/json-server.log 2>&1 &
 JSON_SERVER_PID=$!
-echo "JSON Server iniciado com PID: $JSON_SERVER_PID"
 
-# Aguardar o JSON Server iniciar
-echo "Aguardando o JSON Server iniciar..."
-sleep 5
+# Verificar se o processo está rodando
+echo "JSON Server PID: $JSON_SERVER_PID"
+sleep 3
 if ps -p $JSON_SERVER_PID > /dev/null; then
-  echo "JSON Server está rodando!"
-  cat /tmp/json-server.log
+    echo "JSON Server está rodando com middleware CommonJS."
 else
-  echo "ERRO: JSON Server falhou ao iniciar!"
-  cat /tmp/json-server.log
-  echo "Tentando iniciar sem middleware..."
-  cd /app && json-server --watch db.json --routes routes.json --host 0.0.0.0 --port 3000 > /tmp/json-server.log 2>&1 &
-  JSON_SERVER_PID=$!
-  sleep 5
-fi
-
-# Testar conexão com JSON Server
-echo "Testando conexão com JSON Server..."
-if curl -s -f http://127.0.0.1:3000/products > /dev/null; then
-  echo "Conexão com JSON Server bem-sucedida!"
-  USE_JSON_SERVER=true
-else
-  echo "ERRO: Não foi possível conectar ao JSON Server!"
-  USE_JSON_SERVER=false
-  
-  # Criar API estática como fallback
-  echo "Criando API estática como fallback..."
-  mkdir -p /app/static_api/api
-  
-  # Criar arquivos JSON estáticos para as principais rotas
-  echo '[]' > /app/static_api/api/products
-  echo '[]' > /app/static_api/api/categories
-  echo '[]' > /app/static_api/api/carousel
-  echo '[]' > /app/static_api/api/users
-  echo '[]' > /app/static_api/api/orders
-fi
-
-# Configurar o Nginx para servir os arquivos estáticos do frontend
-echo "Configurando o Nginx..."
-
-if [ "$USE_JSON_SERVER" = true ]; then
-  # Configuração padrão com proxy para JSON Server
-  cat > /etc/nginx/sites-available/default << 'EOF'
-server {
-    listen 80;
-    server_name localhost;
+    echo "ERRO: JSON Server falhou ao iniciar com middleware CommonJS. Verificando logs:"
+    cat /var/log/json-server.log
     
-    location / {
-        root /app/dist;
-        try_files $uri $uri/ /index.html;
-        index index.html;
-    }
-
-    location /api/ {
-        proxy_pass http://127.0.0.1:3000/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-EOF
-else
-  # Configuração de fallback usando arquivos estáticos
-  cat > /etc/nginx/sites-available/default << 'EOF'
-server {
-    listen 80;
-    server_name localhost;
+    # Tentar iniciar JSON Server sem o middleware
+    echo "Tentando iniciar JSON Server sem middleware..."
+    json-server --host 0.0.0.0 --port 3000 --watch db.json --routes routes.json > /var/log/json-server-fallback.log 2>&1 &
+    JSON_SERVER_PID=$!
     
-    location / {
-        root /app/dist;
-        try_files $uri $uri/ /index.html;
-        index index.html;
-    }
-
-    location /api/ {
-        root /app/static_api;
-        add_header Content-Type application/json;
-        try_files $uri $uri/ =404;
-    }
-}
-EOF
+    sleep 3
+    if ps -p $JSON_SERVER_PID > /dev/null; then
+        echo "JSON Server está rodando sem middleware."
+    else
+        echo "ERRO: JSON Server falhou novamente. Último recurso: modo básico..."
+        json-server --host 0.0.0.0 --port 3000 --watch db.json > /var/log/json-server-basic.log 2>&1 &
+        JSON_SERVER_PID=$!
+        
+        sleep 3
+        if ps -p $JSON_SERVER_PID > /dev/null; then
+            echo "JSON Server está rodando em modo básico (sem routes.json)."
+        else
+            echo "ERRO CRÍTICO: JSON Server falhou em todas as tentativas. Verificando logs:"
+            cat /var/log/json-server-basic.log
+        fi
+    fi
 fi
 
-# Iniciar o Nginx
-echo "Iniciando o Nginx..."
-service nginx start || { echo "ERRO: Falha ao iniciar Nginx"; exit 1; }
+# Verificar se o servidor está respondendo
+echo "Verificando se o JSON Server está respondendo..."
+curl -v http://localhost:3000/categories || echo "ERRO: JSON Server não está respondendo"
 
-# Verificar status
-echo "Verificando status dos serviços..."
-if [ "$USE_JSON_SERVER" = true ]; then
-  curl -s http://127.0.0.1:3000/products | head || echo "Erro ao acessar o JSON Server"
-fi
-curl -s http://127.0.0.1/api/products | head || echo "Erro ao acessar o endpoint do Nginx"
-
-# Manter o processo principal ativo
-echo "Serviços iniciados. Nginx na porta 80"
-if [ "$USE_JSON_SERVER" = true ]; then
-  echo "JSON Server na porta 3000"
-  tail -f /tmp/json-server.log
-else
-  echo "Usando API estática como fallback"
-  tail -f /var/log/nginx/access.log
-fi
+# Manter o processo principal ativo e mostrar logs periodicamente
+echo "Serviços iniciados. Nginx na porta 80, JSON Server na porta 3000"
+while true; do
+    sleep 60
+    echo "=== Status dos serviços $(date) ==="
+    echo "Nginx status:"
+    service nginx status || echo "Nginx não está rodando!"
+    
+    echo "JSON Server status (PID: $JSON_SERVER_PID):"
+    if ps -p $JSON_SERVER_PID > /dev/null; then
+        echo "JSON Server está rodando."
+        echo "Últimas linhas do log do JSON Server:"
+        tail -n 10 /var/log/json-server.log
+    else
+        echo "ERRO: JSON Server não está rodando! Reiniciando..."
+        json-server --host 0.0.0.0 --port 3000 --watch db.json --routes routes.json > /var/log/json-server.log 2>&1 &
+        JSON_SERVER_PID=$!
+    fi
+done
