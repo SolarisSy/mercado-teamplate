@@ -298,8 +298,9 @@ Operações:
    ```
 
 3. **Configuração**:
-   - O frontend estará disponível na porta 8080
-   - A API estará disponível na porta 3001 (apenas em ambiente de desenvolvimento)
+   - Para deploy local: o frontend estará disponível na porta 80
+   - Para deploy no Easypanel: o serviço estará disponível no domínio configurado (sem necessidade de especificar porta)
+   - Em ambiente de desenvolvimento, a API estará disponível através do proxy reverso em /api
 
 ## 6. Estrutura de Dados
 
