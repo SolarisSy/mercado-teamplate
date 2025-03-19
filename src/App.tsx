@@ -20,6 +20,7 @@ import { loader as orderHistoryLoader } from "./pages/OrderHistory";
 import { loader as singleOrderLoader } from "./pages/SingleOrderHistory";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { CategoryProvider } from "./context/CategoryContext";
+import { TrackingProvider } from "./context/TrackingContext";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -172,8 +173,10 @@ function App() {
     <AuthProvider>
       <AdminAuthProvider>
         <CategoryProvider>
-          <Toaster position="top-center" />
-          <RouterProvider router={router} />
+          <TrackingProvider>
+            <Toaster position="top-center" />
+            <RouterProvider router={router} />
+          </TrackingProvider>
         </CategoryProvider>
       </AdminAuthProvider>
     </AuthProvider>
