@@ -30,6 +30,7 @@ import ProductForm from "./pages/admin/ProductForm";
 import ProductView from "./pages/admin/ProductView";
 import CategoriesManager from "./pages/admin/CategoriesManager";
 import CarouselManager from "./pages/admin/CarouselManager";
+import TrackingManager from "./pages/admin/TrackingManager";
 import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from 'react-hot-toast';
 
@@ -157,6 +158,10 @@ const router = createBrowserRouter([
       {
         path: "carousel",
         element: <CarouselManager />,
+      },
+      {
+        path: "tracking",
+        element: <TrackingManager />,
       },
     ],
   },
