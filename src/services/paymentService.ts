@@ -49,7 +49,7 @@ class PaymentService {
   
   constructor() {
     this.apiUrl = "https://api.zippify.com.br/api/public/v1/transactions";
-    this.apiToken = "klv5sbESYAohF9whCjjXnPQN2yjl3Tnh62dNy5AySG2QAd2LmqwFSmLEI2Zx";
+    this.apiToken = "221lAClXA7r1263fotxCOFSm3PjbZYv7cB2ZYLzutou34jsTE1GRCOqQ0Mp8";
   }
 
   /**
@@ -86,7 +86,7 @@ class PaymentService {
       // CORREÇÃO: Consolidar todos os produtos em um único item
       // A API retorna erro ao enviar múltiplos produtos
       const cartItemsForApi = [{
-        product_hash: "mercado-product",
+        product_hash: "xlsg2f1mhn",
         title: validCartItems.length > 1 
           ? "Compra de supermercado" 
           : (validCartItems[0]?.title || "Produtos Mercado"),
@@ -100,7 +100,7 @@ class PaymentService {
       // Construir o corpo da requisição
       const requestBody = {
         amount: amountInCents,
-        offer_hash: "pdnczi9glx",
+        offer_hash: "xlsg2f1mhn",
         payment_method: "pix",
         customer: {
           ...customerData,
