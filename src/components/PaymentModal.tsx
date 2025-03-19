@@ -513,29 +513,29 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             <div className="text-center">
               {/* Status do pagamento */}
               {paymentStatus === PaymentStatus.PAID ? (
-                <div className="bg-green-100 border border-success text-success px-4 py-3 rounded-md mb-4">
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-md mb-4">
                   <p className="font-bold">Pagamento confirmado!</p>
                   <p>Seu pedido foi processado com sucesso.</p>
                   <p className="text-sm mt-2">Você será redirecionado em instantes...</p>
                 </div>
               ) : paymentStatus === PaymentStatus.EXPIRED ? (
-                <div className="bg-yellow-100 border border-warning text-warning px-4 py-3 rounded-md mb-4">
+                <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded-md mb-4">
                   <p className="font-bold">Tempo para pagamento expirado</p>
                   <p>O tempo para realizar o pagamento foi excedido.</p>
                   <button
                     onClick={handleRegeneratePix}
-                    className="mt-2 bg-warning text-dark px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors"
+                    className="mt-2 bg-secondary text-white px-4 py-2 rounded-md hover:bg-primary transition-colors"
                   >
                     Gerar novo PIX
                   </button>
                 </div>
               ) : paymentStatus === PaymentStatus.FAILED ? (
-                <div className="bg-red-100 border border-danger text-danger px-4 py-3 rounded-md mb-4">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4">
                   <p className="font-bold">Falha no pagamento</p>
                   <p>Ocorreu um erro ao processar seu pagamento.</p>
                   <button
                     onClick={handleRegeneratePix}
-                    className="mt-2 bg-secondary text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                    className="mt-2 bg-secondary text-white px-4 py-2 rounded-md hover:bg-primary transition-colors"
                   >
                     Tentar novamente
                   </button>
@@ -549,7 +549,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   {/* Contador regressivo */}
                   <div className="mb-4 text-center">
                     <span className="font-semibold">Tempo restante: </span>
-                    <span className={`${timeRemaining < 60 ? 'text-danger' : timeRemaining < 300 ? 'text-warning' : 'text-primary'} font-mono`}>
+                    <span className={`${timeRemaining < 60 ? 'text-secondary' : timeRemaining < 300 ? 'text-warning' : 'text-primary'} font-mono`}>
                       {formatTimeRemaining()}
                     </span>
                   </div>
