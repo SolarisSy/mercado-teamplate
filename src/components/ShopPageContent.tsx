@@ -95,6 +95,8 @@ const ShopPageContent = ({ category, page }: ShopPageContentProps) => {
                 title={product.title}
                 category={product.category}
                 price={product.price}
+                stock={product.stock}
+                featured={product.featured}
               />
             ))}
           </div>

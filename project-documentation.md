@@ -12,7 +12,7 @@ O Mercado E-commerce é uma plataforma completa de comércio eletrônico para pr
 - **Frontend**:
   - React.js (18.3.1)
   - TypeScript (5.2.2)
-  - Redux Toolkit (gerenciamento de estado)
+  - Redux Toolkit (2.2.7)
   - React Router (6.25.1)
   - TailwindCSS (3.4.6)
   - Axios (1.7.2)
@@ -21,18 +21,21 @@ O Mercado E-commerce é uma plataforma completa de comércio eletrônico para pr
   - HeadlessUI (2.1.2)
   - Firebase (11.4.0)
   - Redux Persist (6.0.0)
+  - QRCode.react (4.2.0)
+  - Browser Image Compression (2.0.2)
 
 - **Backend**:
   - Firebase como principal backend:
     - Firestore para armazenamento de dados
     - Firebase Authentication para autenticação de usuários
-  - API REST simulada com JSON Server (para desenvolvimento local)
+  - API REST simulada com JSON Server (1.0.0-beta.1) para desenvolvimento local
   - Banco de dados JSON para desenvolvimento local
 
 - **DevOps**:
   - Docker (containerização)
   - Nginx (servidor web)
   - Docker Compose (orquestração de contêineres)
+  - Nixpacks (para deploy no Easypanel)
 
 ## 2. Estrutura e Arquitetura
 
@@ -44,6 +47,7 @@ O projeto segue uma arquitetura cliente-servidor:
    - Gerenciamento de estado com Redux e Redux Persist
    - Roteamento com React Router
    - Interface responsiva com TailwindCSS
+   - Componentes modulares com foco em reutilização
 
 2. **Backend (Servidor)**:
    - Firebase como principal backend:
@@ -56,6 +60,7 @@ O projeto segue uma arquitetura cliente-servidor:
    - Containerização com Docker
    - Nginx como proxy reverso
    - Docker Compose para orquestração
+   - Script de inicialização otimizado (start.sh)
 
 ### Organização dos arquivos:
 ```
@@ -66,6 +71,16 @@ O projeto segue uma arquitetura cliente-servidor:
 │   ├── assets/           # Recursos estáticos (imagens, etc.)
 │   ├── axios/            # Configuração do cliente Axios
 │   ├── components/       # Componentes reutilizáveis da UI
+│   │   ├── Banner.tsx           # Banner promocional da página inicial
+│   │   ├── Button.tsx           # Componente de botão reutilizável
+│   │   ├── Footer.tsx           # Rodapé do site
+│   │   ├── Header.tsx           # Cabeçalho do site
+│   │   ├── Navbar.tsx           # Barra de navegação
+│   │   ├── PaymentModal.tsx     # Modal de processamento de pagamento
+│   │   ├── ProductImage.tsx     # Exibição de imagem de produto
+│   │   ├── ProductItem.tsx      # Item de produto na grade
+│   │   ├── ProtectedRoute.tsx   # Rota protegida para usuários logados
+│   │   └── ... 
 │   ├── context/          # Contextos React (autenticação, etc.)
 │   ├── data/             # Dados estáticos ou mockados
 │   ├── features/         # Funcionalidades específicas
@@ -76,8 +91,27 @@ O projeto segue uma arquitetura cliente-servidor:
 │   ├── hooks/            # Hooks personalizados
 │   ├── pages/            # Componentes de página
 │   │   ├── admin/        # Páginas do painel administrativo
-│   │   └── ...           # Outras páginas do site
+│   │   │   ├── AdminDashboard.tsx    # Layout principal do painel admin
+│   │   │   ├── AdminLogin.tsx        # Página de login administrativo
+│   │   │   ├── CarouselManager.tsx   # Gerenciamento de banners do carrossel
+│   │   │   ├── CategoriesManager.tsx # Gerenciamento de categorias
+│   │   │   ├── DashboardHome.tsx     # Página inicial do dashboard
+│   │   │   ├── ProductForm.tsx       # Formulário de criação/edição de produto
+│   │   │   ├── ProductsList.tsx      # Lista de produtos
+│   │   │   └── ProductView.tsx       # Visualização detalhada de produto
+│   │   ├── Cart.tsx               # Página do carrinho de compras
+│   │   ├── Checkout.tsx           # Página de checkout
+│   │   ├── Landing.tsx            # Página inicial
+│   │   ├── Login.tsx              # Página de login
+│   │   ├── OrderConfirmation.tsx  # Confirmação de pedido
+│   │   ├── OrderHistory.tsx       # Histórico de pedidos
+│   │   ├── Register.tsx           # Página de registro
+│   │   ├── Shop.tsx               # Página da loja
+│   │   ├── SingleOrderHistory.tsx # Detalhes de um pedido específico
+│   │   ├── SingleProduct.tsx      # Página de produto individual
+│   │   └── UserProfile.tsx        # Perfil do usuário
 │   ├── redux/            # Configuração do Redux, slices, etc.
+│   │   └── slices/       # Slices Redux para gerenciamento de estado
 │   ├── services/         # Serviços para comunicação com a API
 │   ├── types/            # Definições de tipos TypeScript
 │   ├── utils/            # Utilitários e funções auxiliares
@@ -93,6 +127,8 @@ O projeto segue uma arquitetura cliente-servidor:
 ├── firestore.rules       # Regras de segurança do Firestore
 ├── firestore.indexes.json # Índices do Firestore
 ├── nginx.conf            # Configuração do Nginx
+├── nixpacks.toml         # Configuração do Nixpacks para deploy
+├── start.sh              # Script de inicialização
 ├── .env                  # Variáveis de ambiente
 ├── db.json               # Banco de dados JSON para desenvolvimento
 ├── routes.json           # Configuração de rotas para o JSON Server
@@ -108,16 +144,19 @@ O projeto segue uma arquitetura cliente-servidor:
    - O cliente faz requisições HTTP para a API usando Axios para o JSON Server em ambiente de desenvolvimento
    - Requisições são autenticadas através do Firebase Authentication
    - Dados são enviados no formato JSON
+   - Interações de pagamento processadas através do PaymentModal
 
 2. **Servidor → Cliente**:
    - Firebase processa as requisições e retorna dados 
    - Em desenvolvimento, o JSON Server processa as requisições e retorna dados JSON
    - Firebase Authentication gerencia tokens de autenticação
+   - Respostas são processadas e atualizadas no estado do Redux
    
 3. **Gerenciamento de Estado**:
    - Redux Toolkit gerencia o estado global da aplicação
-   - Redux Persist mantém estado entre sessões
+   - Redux Persist mantém estado entre sessões (carrinho, autenticação)
    - Contextos React para estados específicos (autenticação, categorias)
+   - Armazenamento de imagens otimizado com browser-image-compression
 
 ## 3. Funcionalidades e Módulos
 
@@ -128,45 +167,54 @@ O projeto segue uma arquitetura cliente-servidor:
    - Filtragem por categoria
    - Pesquisa de produtos
    - Visualização detalhada de produto
+   - Exibição de informações nutricionais e detalhes de produtos
 
 2. **Carrinho de Compras**
    - Adição/remoção de itens
    - Atualização de quantidades
    - Cálculo de subtotal e total
+   - Persistência do carrinho entre sessões
 
 3. **Checkout**
    - Formulário de endereço de entrega
    - Seleção de método de pagamento
+   - Modal de pagamento com QR Code
    - Confirmação de pedido
 
 4. **Autenticação de Usuário**
    - Registro de nova conta
    - Login/logout
    - Recuperação de senha
+   - Roteamento protegido para áreas restritas
 
 5. **Perfil de Usuário**
    - Visualização/edição de informações pessoais
    - Gerenciamento de endereços
    - Histórico de pedidos
+   - Visualização detalhada de pedidos anteriores
 
 ### Funcionalidades para Administradores:
 
 1. **Painel Administrativo**
    - Visão geral com métricas (produtos, pedidos, receita)
    - Autenticação segura para administradores
+   - Interface dedicada para gerenciamento
 
 2. **Gerenciamento de Produtos**
    - Listagem, criação, edição e exclusão de produtos
    - Upload e compressão de múltiplas imagens
    - Gerenciamento de estoque, tamanhos e cores
+   - Controle de produtos orgânicos e informações nutricionais
 
 3. **Gerenciamento de Categorias**
    - Criação e edição de categorias
    - Organização de produtos por categoria
+   - Interface visual para categorias
 
-4. **Gerenciamento de Usuários**
-   - Visualização e edição de contas de usuário
-   - Definição de níveis de acesso
+4. **Gerenciamento de Banners**
+   - Criação e edição de banners do carrossel
+   - Controle de ordem e visibilidade
+   - Upload de imagens para banners
 
 ## 4. APIs e Integrações
 
@@ -174,9 +222,9 @@ O projeto segue uma arquitetura cliente-servidor:
 
 #### Firebase Authentication
 - Autenticação de Email/Senha
-- Login com provedores sociais (Google, Facebook, etc.)
 - Gerenciamento de usuários (registro, login, redefinição de senha)
 - Proteção de rotas baseada em autenticação
+- Verificação de perfil de administrador
 
 #### Firebase Firestore
 Coleções principais:
@@ -184,6 +232,7 @@ Coleções principais:
 - `categories`: Gerenciamento de categorias
 - `orders`: Pedidos dos clientes
 - `users`: Detalhes estendidos dos usuários
+- `carouselBanners`: Banners do carrossel
 
 Operações:
 - CRUD completo em cada coleção
@@ -222,6 +271,12 @@ Operações:
 - `POST /users` - Cria um novo usuário
 - `PUT /users/:id` - Atualiza um usuário existente
 
+#### Banners do Carrossel
+- `GET /carouselBanners` - Lista todos os banners
+- `POST /carouselBanners` - Cria um novo banner
+- `PUT /carouselBanners/:id` - Atualiza um banner existente
+- `DELETE /carouselBanners/:id` - Remove um banner
+
 ## 5. Instalação e Deploy
 
 ### Instalação Local
@@ -252,12 +307,15 @@ Operações:
    # VITE_FIREBASE_APP_ID=seu_app_id
 
    # Inicie o servidor de desenvolvimento
-   npm start
+   npm run dev
+
+   # Para iniciar o JSON Server junto com o frontend
+   npm run server
    ```
 
 3. **Comandos úteis**:
-   - `npm start` - Inicia o frontend (Vite)
-   - `npm run dev` - Inicia apenas o frontend (Vite)
+   - `npm run dev` - Inicia o frontend (Vite)
+   - `npm start` - Inicia o frontend (Vite) - alias para dev
    - `npm run server` - Inicia apenas o JSON Server (para desenvolvimento local)
    - `npm run build` - Compila o projeto para produção
 
@@ -377,6 +435,15 @@ interface User {
   email: string;
   role: string;
   password: string;
+  address?: {
+    street: string;
+    number: string;
+    complement?: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipcode: string;
+  };
 }
 ```
 
@@ -388,6 +455,16 @@ interface Order {
   orderDate: string;
   data: {
     email: string;
+    address: {
+      street: string;
+      number: string;
+      complement?: string;
+      neighborhood: string;
+      city: string;
+      state: string;
+      zipcode: string;
+    };
+    paymentMethod: string;
   };
   products: ProductInCart[];
   subtotal: number;
@@ -436,9 +513,8 @@ O sistema utiliza Firebase Authentication para gerenciar os processos de autenti
 1. **Autenticação de Cliente**:
    - Registro com email e senha
    - Login com credenciais de email/senha
-   - Opção de login com provedores sociais (Google, Facebook)
    - Recuperação de senha via email
-   - Verificação de email
+   - Componente ProtectedRoute para rotas protegidas
    - Redux Persist para manter o estado de autenticação entre sessões
 
 2. **Autenticação de Administrador**:
@@ -453,7 +529,28 @@ O sistema utiliza Firebase Authentication para gerenciar os processos de autenti
    - Validação de dados no lado do servidor
    - Controle de acesso por documento e coleção
 
-## 8. Futuras Melhorias
+## 8. Sistema de Pagamento
+
+O sistema inclui um componente de pagamento (PaymentModal.tsx) que:
+
+1. **Funcionalidades de Pagamento**:
+   - Geração de QR Code para pagamento via PIX
+   - Opção de pagamento via cartão de crédito/débito
+   - Simulação de pagamento para testes
+   - Histórico de transações
+
+2. **Fluxo de Pagamento**:
+   - Seleção do método de pagamento no checkout
+   - Abertura do modal de pagamento
+   - Processamento da transação
+   - Confirmação e redirecionamento para página de confirmação de pedido
+
+3. **Segurança**:
+   - Dados sensíveis não são armazenados no cliente
+   - Transações são registradas no Firestore
+   - Validação do status de pagamento
+
+## 9. Futuras Melhorias
 
 - Implementação de Firebase Cloud Functions para lógica de backend mais complexa
 - Implementação de Firebase Storage para armazenamento de imagens otimizado
@@ -466,3 +563,5 @@ O sistema utiliza Firebase Authentication para gerenciar os processos de autenti
 - Suporte a múltiplos idiomas e internacionalização
 - Implementação de PWA (Progressive Web App) para experiência mobile aprimorada
 - Testes automatizados com Jest e React Testing Library 
+- Sistema de avaliações e reviews de produtos
+- Implementação de chatbot para suporte ao cliente 
