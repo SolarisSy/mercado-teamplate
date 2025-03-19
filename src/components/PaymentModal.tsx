@@ -393,13 +393,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden"
       >
         {/* Cabeçalho do Modal */}
-        <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
+        <div className="bg-primary text-white px-6 py-4 flex justify-between items-center">
           <h3 className="text-lg font-medium">
             {step === 'personal-data' ? 'Dados Pessoais' : 'Pagamento PIX'}
           </h3>
           <button 
             onClick={handleClose}
-            className="bg-white text-green-600 hover:bg-gray-200 w-8 h-8 flex items-center justify-center rounded-full text-xl font-bold focus:outline-none transition-colors"
+            className="bg-white text-primary hover:bg-gray-200 w-8 h-8 flex items-center justify-center rounded-full text-xl font-bold focus:outline-none transition-colors"
           >
             &times;
           </button>
@@ -446,7 +446,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-secondaryBrown"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                   required
                 />
               </div>
@@ -460,7 +460,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   name="cpf"
                   value={formData.cpf}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-secondaryBrown"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                   required
                   maxLength={14}
                   placeholder="000.000.000-00"
@@ -476,7 +476,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-secondaryBrown"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                   required
                   maxLength={15}
                   placeholder="(00) 00000-0000"
@@ -492,7 +492,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-secondaryBrown"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                   required
                 />
               </div>
@@ -501,7 +501,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 onClick={handleGeneratePix}
                 disabled={isLoading}
                 type="button"
-                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-300 disabled:opacity-50"
+                className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-secondary transition duration-300 disabled:opacity-50"
               >
                 {isLoading ? 'Gerando PIX...' : 'Gerar PIX Seguro'}
               </button>
@@ -513,29 +513,29 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             <div className="text-center">
               {/* Status do pagamento */}
               {paymentStatus === PaymentStatus.PAID ? (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-md mb-4">
+                <div className="bg-green-100 border border-success text-success px-4 py-3 rounded-md mb-4">
                   <p className="font-bold">Pagamento confirmado!</p>
                   <p>Seu pedido foi processado com sucesso.</p>
                   <p className="text-sm mt-2">Você será redirecionado em instantes...</p>
                 </div>
               ) : paymentStatus === PaymentStatus.EXPIRED ? (
-                <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded-md mb-4">
+                <div className="bg-yellow-100 border border-warning text-warning px-4 py-3 rounded-md mb-4">
                   <p className="font-bold">Tempo para pagamento expirado</p>
                   <p>O tempo para realizar o pagamento foi excedido.</p>
                   <button
                     onClick={handleRegeneratePix}
-                    className="mt-2 bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors"
+                    className="mt-2 bg-warning text-dark px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors"
                   >
                     Gerar novo PIX
                   </button>
                 </div>
               ) : paymentStatus === PaymentStatus.FAILED ? (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4">
+                <div className="bg-red-100 border border-danger text-danger px-4 py-3 rounded-md mb-4">
                   <p className="font-bold">Falha no pagamento</p>
                   <p>Ocorreu um erro ao processar seu pagamento.</p>
                   <button
                     onClick={handleRegeneratePix}
-                    className="mt-2 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors"
+                    className="mt-2 bg-secondary text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
                   >
                     Tentar novamente
                   </button>
@@ -549,7 +549,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   {/* Contador regressivo */}
                   <div className="mb-4 text-center">
                     <span className="font-semibold">Tempo restante: </span>
-                    <span className={`${timeRemaining < 60 ? 'text-red-600' : timeRemaining < 300 ? 'text-yellow-600' : 'text-green-600'} font-mono`}>
+                    <span className={`${timeRemaining < 60 ? 'text-danger' : timeRemaining < 300 ? 'text-warning' : 'text-primary'} font-mono`}>
                       {formatTimeRemaining()}
                     </span>
                   </div>
@@ -584,7 +584,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   <button
                     onClick={handleManualCheckPayment}
                     disabled={isLoading}
-                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-300 disabled:opacity-50"
+                    className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-secondary transition duration-300 disabled:opacity-50"
                   >
                     {isLoading ? 'Verificando...' : 'Verificar Pagamento'}
                   </button>
