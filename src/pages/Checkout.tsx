@@ -120,7 +120,7 @@ const Checkout = () => {
           <p className="mb-6">Adicione produtos ao seu carrinho antes de finalizar a compra.</p>
           <button
             onClick={() => navigate('/shop')}
-            className="bg-primary text-white px-6 py-2 rounded-md hover:bg-secondary transition"
+            className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition"
           >
             Voltar às compras
           </button>
@@ -140,9 +140,9 @@ const Checkout = () => {
             <div key={step.id} className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 currentStep === step.id 
-                  ? 'bg-primary text-white' 
+                  ? 'bg-green-600 text-white' 
                   : currentStep > step.id 
-                  ? 'bg-primary bg-opacity-70 text-white'
+                  ? 'bg-green-500 text-white'
                   : 'bg-gray-200 text-gray-600'
               }`}>
                 {currentStep > step.id ? '✓' : step.id}
@@ -150,7 +150,7 @@ const Checkout = () => {
               <span className="ml-2 text-sm hidden sm:block">{step.name}</span>
               {step.id !== steps.length && (
                 <div className="w-12 h-1 mx-2 bg-gray-200">
-                  <div className={`h-full ${currentStep > step.id ? 'bg-primary' : 'bg-gray-200'}`} />
+                  <div className={`h-full ${currentStep > step.id ? 'bg-green-500' : 'bg-gray-200'}`} />
                 </div>
               )}
             </div>
@@ -171,7 +171,7 @@ const Checkout = () => {
                   id="firstName"
                   name="firstName"
                   required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                 />
               </div>
               <div>
@@ -181,7 +181,7 @@ const Checkout = () => {
                   id="lastName"
                   name="lastName"
                   required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                 />
               </div>
               <div className="sm:col-span-2">
@@ -191,7 +191,7 @@ const Checkout = () => {
                   id="emailAddress"
                   name="emailAddress"
                   required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                 />
               </div>
               <div className="sm:col-span-2">
@@ -201,7 +201,7 @@ const Checkout = () => {
                   id="phone"
                   name="phone"
                   required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                 />
               </div>
             </div>
@@ -220,7 +220,7 @@ const Checkout = () => {
                   id="address"
                   name="address"
                   required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                 />
               </div>
               <div>
@@ -229,7 +229,7 @@ const Checkout = () => {
                   type="text"
                   id="apartment"
                   name="apartment"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -240,7 +240,7 @@ const Checkout = () => {
                     id="city"
                     name="city"
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                   />
                 </div>
                 <div>
@@ -251,7 +251,7 @@ const Checkout = () => {
                     name="postalCode"
                     required
                     placeholder="00000-000"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                   />
                 </div>
               </div>
@@ -284,18 +284,18 @@ const Checkout = () => {
                       htmlFor={method.id}
                       className={`cursor-pointer block border rounded-md p-4 ${
                         paymentMethod === method.id
-                          ? 'border-primary bg-blue-50'
+                          ? 'border-green-600 bg-green-50'
                           : 'border-gray-300'
                       }`}
                     >
                       <span className="flex items-center">
                         <span className={`w-5 h-5 mr-2 rounded-full border ${
                           paymentMethod === method.id
-                            ? 'border-primary'
+                            ? 'border-green-600'
                             : 'border-gray-300'
                         }`}>
                           {paymentMethod === method.id && (
-                            <span className="block w-3 h-3 m-1 rounded-full bg-primary"></span>
+                            <span className="block w-3 h-3 m-1 rounded-full bg-green-600"></span>
                           )}
                         </span>
                         <span className="text-sm font-medium">{method.title}</span>
@@ -315,7 +315,7 @@ const Checkout = () => {
                     type="text"
                     id="nameOnCard"
                     name="nameOnCard"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                   />
                 </div>
                 <div>
@@ -326,7 +326,7 @@ const Checkout = () => {
                     name="cardNumber"
                     pattern="[0-9]*"
                     maxLength={16}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -339,7 +339,7 @@ const Checkout = () => {
                       placeholder="MM/AA"
                       pattern="[0-9]{2}/[0-9]{2}"
                       maxLength={5}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                     />
                   </div>
                   <div>
@@ -350,7 +350,7 @@ const Checkout = () => {
                       name="cvc"
                       pattern="[0-9]*"
                       maxLength={4}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
                     />
                   </div>
                 </div>
@@ -417,14 +417,14 @@ const Checkout = () => {
             <button
               type="button"
               onClick={() => setCurrentStep(currentStep + 1)}
-              className="ml-auto px-6 py-3 bg-primary text-white rounded-md hover:bg-secondary transition duration-300"
+              className="ml-auto px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300"
             >
               Continuar
             </button>
           ) : (
             <button
               type="submit"
-              className="ml-auto px-6 py-3 bg-primary text-white rounded-md hover:bg-secondary transition duration-300"
+              className="ml-auto px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300"
             >
               Finalizar Pedido
             </button>
