@@ -58,11 +58,11 @@ const AdminDashboard = () => {
             {isSidebarOpen && <span className="ml-3">Carrossel</span>}
           </Link>
           <Link 
-            to="/admin/analytics" 
+            to="/admin/tracking" 
             className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-200"
           >
             <HiOutlineChartBar className="text-xl" />
-            {isSidebarOpen && <span className="ml-3">Analytics & Pixel</span>}
+            {isSidebarOpen && <span className="ml-3">Rastreamento</span>}
           </Link>
           <Link 
             to="/admin/users" 

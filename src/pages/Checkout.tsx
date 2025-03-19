@@ -6,7 +6,6 @@ import customFetch from "../axios/custom";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
-import pixelService from "../services/pixelService";
 
 const paymentMethods = [
   { id: "credit-card", title: "Cartão de Crédito" },
@@ -35,22 +34,8 @@ const Checkout = () => {
     if (!hasItems) {
       toast.error("Seu carrinho está vazio");
       navigate("/shop");
-    } else {
-      // Rastrear evento de início de checkout
-      const checkoutProducts = cartItems.map(item => ({
-        id: item.id,
-        name: item.title,
-        category: item.category,
-        price: item.price,
-        quantity: item.quantity
-      }));
-      
-      pixelService.trackInitiateCheckout({
-        products: checkoutProducts,
-        value: totalAmount
-      });
     }
-  }, [hasItems, navigate, cartItems, totalAmount]);
+  }, [hasItems, navigate]);
 
   const steps = [
     { id: 1, name: 'Informações de Contato' },
@@ -115,25 +100,6 @@ const Checkout = () => {
       }
 
       if (response.status === 201) {
-        // Rastrear evento de compra finalizada
-        const purchaseProducts = cartItems.map(item => ({
-          id: item.id,
-          name: item.title,
-          category: item.category,
-          price: item.price,
-          quantity: item.quantity
-        }));
-        
-        pixelService.trackPurchase({
-          products: purchaseProducts,
-          value: totalAmount
-        });
-        
-        // Salvar informações para a página de confirmação
-        localStorage.setItem('orderItems', JSON.stringify(cartItems));
-        localStorage.setItem('orderTotal', totalAmount.toString());
-        localStorage.setItem('orderNumber', `PED-${Date.now().toString().substring(7)}`);
-        
         toast.success("Pedido realizado com sucesso!");
         // Limpar o carrinho é feito na página de confirmação
         navigate("/order-confirmation");

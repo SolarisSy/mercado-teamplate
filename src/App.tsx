@@ -30,10 +30,8 @@ import ProductForm from "./pages/admin/ProductForm";
 import ProductView from "./pages/admin/ProductView";
 import CategoriesManager from "./pages/admin/CategoriesManager";
 import CarouselManager from "./pages/admin/CarouselManager";
-import AnalyticsManager from "./pages/admin/AnalyticsManager";
 import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from 'react-hot-toast';
-import PixelInitializer from "./components/PixelInitializer";
 
 const router = createBrowserRouter([
   {
@@ -160,10 +158,6 @@ const router = createBrowserRouter([
         path: "carousel",
         element: <CarouselManager />,
       },
-      {
-        path: "analytics",
-        element: <AnalyticsManager />,
-      },
     ],
   },
 ]);
@@ -175,7 +169,6 @@ function App() {
         <CategoryProvider>
           <Toaster position="top-center" />
           <RouterProvider router={router} />
-          <PixelInitializer />
         </CategoryProvider>
       </AdminAuthProvider>
     </AuthProvider>

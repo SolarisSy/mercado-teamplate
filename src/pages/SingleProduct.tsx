@@ -12,7 +12,6 @@ import WithNumberInputWrapper from "../utils/withNumberInputWrapper";
 import { formatCategoryName } from "../utils/formatCategoryName";
 import toast from "react-hot-toast";
 import customFetch from "../utils/customFetch";
-import pixelService from "../services/pixelService";
 
 const SingleProduct = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -30,16 +29,6 @@ const SingleProduct = () => {
       try {
         const response = await customFetch.get(`/products/${params.id}`);
         setSingleProduct(response.data);
-        
-        // Rastreamento de visualização de produto
-        if (response.data) {
-          pixelService.trackViewContent({
-            id: response.data.id,
-            name: response.data.title,
-            category: response.data.category,
-            price: response.data.price
-          });
-        }
       } catch (error) {
         console.error("Error fetching product:", error);
         toast.error("Failed to load product details");
@@ -80,16 +69,6 @@ const SingleProduct = () => {
           unit: singleProduct.unit
         })
       );
-      
-      // Rastreamento de adição ao carrinho
-      pixelService.trackAddToCart({
-        id: singleProduct.id,
-        name: singleProduct.title,
-        category: singleProduct.category,
-        price: singleProduct.price,
-        quantity: quantity
-      });
-      
       toast.success("Produto adicionado ao carrinho");
     }
   };
