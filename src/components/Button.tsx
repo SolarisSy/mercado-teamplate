@@ -11,16 +11,25 @@ const Button = ({ mode, text, ...props }: ButtonProps) => {
       {mode === "white" && (
         <button
           {...props}
-          className="bg-white text-black text-center text-xl border border-gray-400 font-normal tracking-[0.6px] leading-[72px] w-full h-12 flex items-center justify-center max-md:text-base"
+          className="bg-white text-primary text-center text-xl border border-gray-400 font-normal tracking-[0.6px] leading-[72px] w-full h-12 flex items-center justify-center max-md:text-base"
         >
           {text}
         </button>
       )}
 
-      {mode === "brown" && (
+      {mode === "primary" && (
         <button
           {...props}
-          className="text-white bg-secondaryBrown text-center text-xl font-normal tracking-[0.6px] leading-[72px] w-full h-12 flex items-center justify-center max-md:text-base"
+          className="text-white bg-primary text-center text-xl font-normal tracking-[0.6px] leading-[72px] w-full h-12 flex items-center justify-center max-md:text-base"
+        >
+          {text}
+        </button>
+      )}
+
+      {mode === "secondary" && (
+        <button
+          {...props}
+          className="text-white bg-secondary text-center text-xl font-normal tracking-[0.6px] leading-[72px] w-full h-12 flex items-center justify-center max-md:text-base"
         >
           {text}
         </button>
@@ -29,13 +38,13 @@ const Button = ({ mode, text, ...props }: ButtonProps) => {
       {mode === "transparent" && (
         <button
           {...props}
-          className="text-white border-white border-2 text-center text-xl font-normal tracking-[0.6px] leading-[72px] w-full h-12 flex items-center justify-center max-md:text-base"
+          className="text-primary border-primary border-2 text-center text-xl font-normal tracking-[0.6px] leading-[72px] w-full h-12 flex items-center justify-center max-md:text-base"
         >
           {text}
         </button>
       )}
 
-      {mode !== "white" && mode !== "brown" && mode !== "transparent" && (
+      {mode !== "white" && mode !== "primary" && mode !== "secondary" && mode !== "transparent" && (
         <p>No valid mode selected</p>
       )}
     </>

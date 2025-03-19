@@ -19,7 +19,7 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
   
   return (
-    <footer className="bg-dark text-white pt-12 pb-6">
+    <footer className="bg-primary text-white pt-12 pb-6">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Informações do Supermercado */}
@@ -33,16 +33,16 @@ const Footer = () => {
               Oferecendo qualidade, economia e praticidade para o seu dia a dia. Seu supermercado sempre ao seu alcance!
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-300 hover:text-green-400">
+              <a href="#" className="text-gray-300 hover:text-secondary">
                 <FaFacebook size={20} />
               </a>
-              <a href="#" className="text-gray-300 hover:text-green-400">
+              <a href="#" className="text-gray-300 hover:text-secondary">
                 <FaInstagram size={20} />
               </a>
-              <a href="#" className="text-gray-300 hover:text-green-400">
+              <a href="#" className="text-gray-300 hover:text-secondary">
                 <FaTwitter size={20} />
               </a>
-              <a href="#" className="text-gray-300 hover:text-green-400">
+              <a href="#" className="text-gray-300 hover:text-secondary">
                 <FaYoutube size={20} />
               </a>
             </div>
@@ -50,7 +50,7 @@ const Footer = () => {
           
           {/* Categorias */}
           <div>
-            <h3 className="text-lg font-bold mb-4 text-green-400">Departamentos</h3>
+            <h3 className="text-lg font-bold mb-4 text-secondary">Departamentos</h3>
             <ul className="space-y-2">
               <li><Link to="/shop/hortifruti" className="text-gray-300 hover:text-white">Hortifruti</Link></li>
               <li><Link to="/shop/acougue" className="text-gray-300 hover:text-white">Açougue</Link></li>
@@ -64,7 +64,7 @@ const Footer = () => {
           
           {/* Links Úteis */}
           <div>
-            <h3 className="text-lg font-bold mb-4 text-green-400">Links Úteis</h3>
+            <h3 className="text-lg font-bold mb-4 text-secondary">Links Úteis</h3>
             <ul className="space-y-2">
               <li><Link to="/about" className="text-gray-300 hover:text-white">Sobre Nós</Link></li>
               <li><Link to="/contact" className="text-gray-300 hover:text-white">Contato</Link></li>
@@ -76,26 +76,26 @@ const Footer = () => {
           
           {/* Contato */}
           <div>
-            <h3 className="text-lg font-bold mb-4 text-green-400">Contato</h3>
+            <h3 className="text-lg font-bold mb-4 text-secondary">Contato</h3>
             <ul className="space-y-3">
               <li className="flex items-start">
-                <FaMapMarkerAlt className="text-green-400 mt-1 mr-2" />
+                <FaMapMarkerAlt className="text-secondary mt-1 mr-2" />
                 <span>Av. Brasil, 1500, Centro, Belo Horizonte - MG</span>
               </li>
               <li className="flex items-center">
-                <FaPhone className="text-green-400 mr-2" />
+                <FaPhone className="text-secondary mr-2" />
                 <span>(31) 3333-4444</span>
               </li>
               <li className="flex items-center">
-                <FaWhatsapp className="text-green-400 mr-2" />
+                <FaWhatsapp className="text-secondary mr-2" />
                 <span>(31) 99999-8888</span>
               </li>
               <li className="flex items-center">
-                <FaEnvelope className="text-green-400 mr-2" />
+                <FaEnvelope className="text-secondary mr-2" />
                 <span>contato@apoioentrega.com.br</span>
               </li>
               <li className="flex items-center">
-                <FaClock className="text-green-400 mr-2" />
+                <FaClock className="text-secondary mr-2" />
                 <span>Seg - Sáb: 8h às 22h | Dom: 8h às 20h</span>
               </li>
             </ul>
@@ -106,7 +106,7 @@ const Footer = () => {
         
         {/* Formas de Pagamento */}
         <div className="mb-6">
-          <h3 className="text-center text-lg font-bold mb-4 text-green-400">Formas de Pagamento</h3>
+          <h3 className="text-center text-lg font-bold mb-4 text-secondary">Formas de Pagamento</h3>
           <div className="flex justify-center space-x-4">
             <FaCcVisa size={32} className="text-gray-300" />
             <FaCcMastercard size={32} className="text-gray-300" />

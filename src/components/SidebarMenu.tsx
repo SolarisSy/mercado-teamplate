@@ -39,13 +39,13 @@ const SidebarMenu = ({
         <div
           className={
             isSidebarOpen
-              ? "fixed top-0 left-0 w-64 z-50 h-full transition-transform duration-300 ease-in-out bg-white shadow-lg transform border-r border-black translate-x-0"
-              : "fixed top-0 left-0 w-64 z-50 h-full transition-transform duration-300 ease-in-out bg-white shadow-lg transform border-r border-black -translate-x-full"
+              ? "fixed top-0 left-0 w-64 z-50 h-full transition-transform duration-300 ease-in-out bg-white shadow-lg transform border-r border-primary translate-x-0"
+              : "fixed top-0 left-0 w-64 z-50 h-full transition-transform duration-300 ease-in-out bg-white shadow-lg transform border-r border-primary -translate-x-full"
           }
         >
           <div className="flex justify-end mr-1 mt-1">
             <HiXMark
-              className="text-3xl cursor-pointer"
+              className="text-3xl cursor-pointer text-primary"
               onClick={() => setIsSidebarOpen(false)}
             />
           </div>
@@ -55,28 +55,28 @@ const SidebarMenu = ({
               className="flex items-center justify-center"
             >
               <img 
-                src="/logo.png" 
-                alt="VICHY Laboratories" 
-                className="h-10"
+                src="/img/marca_apoio_entrega@2x.png" 
+                alt="Apoio Entrega" 
+                className="h-12"
               />
             </Link>
           </div>
           <div className="flex flex-col items-center gap-1 mt-7">
             <Link
               to="/"
-              className="py-2 border-y border-secondaryBrown w-full block flex justify-center"
+              className="py-2 border-y border-primary w-full block flex justify-center hover:bg-primary hover:text-white transition-colors"
             >
               Home
             </Link>
             <Link
               to="/shop"
-              className="py-2 border-y border-secondaryBrown w-full block flex justify-center"
+              className="py-2 border-y border-primary w-full block flex justify-center hover:bg-primary hover:text-white transition-colors"
             >
               Shop
             </Link>
             <Link
               to="/search"
-              className="py-2 border-y border-secondaryBrown w-full block flex justify-center"
+              className="py-2 border-y border-primary w-full block flex justify-center hover:bg-primary hover:text-white transition-colors"
             >
               Search
             </Link>
@@ -84,7 +84,7 @@ const SidebarMenu = ({
               <>
                 <button
                   onClick={logout}
-                  className="py-2 border-y border-secondaryBrown w-full block flex justify-center"
+                  className="py-2 border-y border-primary w-full block flex justify-center hover:bg-secondary hover:text-white transition-colors"
                 >
                   Logout
                 </button>
@@ -93,13 +93,13 @@ const SidebarMenu = ({
               <>
                 <Link
                   to="/login"
-                  className="py-2 border-y border-secondaryBrown w-full block flex justify-center"
+                  className="py-2 border-y border-primary w-full block flex justify-center hover:bg-primary hover:text-white transition-colors"
                 >
                   Sign in
                 </Link>
                 <Link
                   to="/register"
-                  className="py-2 border-y border-secondaryBrown w-full block flex justify-center"
+                  className="py-2 border-y border-primary w-full block flex justify-center hover:bg-primary hover:text-white transition-colors"
                 >
                   Sign up
                 </Link>
@@ -107,7 +107,7 @@ const SidebarMenu = ({
             )}
             <Link
               to="/cart"
-              className="py-2 border-y border-secondaryBrown w-full block flex justify-center"
+              className="py-2 border-y border-primary w-full block flex justify-center hover:bg-primary hover:text-white transition-colors"
             >
               Cart
             </Link>

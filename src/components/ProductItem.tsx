@@ -72,7 +72,7 @@ const ProductItem = ({ id, image, title, category = "", price, popularity, stock
       {/* Badge de promoção */}
       {featured && (
         <div className="absolute top-2 left-2 z-10">
-          <div className="bg-red-600 text-white text-xs px-2 py-1 rounded-full flex items-center">
+          <div className="bg-secondary text-white text-xs px-2 py-1 rounded-full flex items-center">
             <FaTags className="mr-1" />
             <span>Oferta</span>
           </div>
@@ -116,7 +116,7 @@ const ProductItem = ({ id, image, title, category = "", price, popularity, stock
                 e.preventDefault();
                 handleAddToCart(e);
               }}
-              className="bg-green-600 text-white px-4 py-2 rounded-full flex items-center transition hover:bg-green-700"
+              className="bg-primary text-white px-4 py-2 rounded-full flex items-center transition hover:bg-secondary"
             >
               <HiOutlineShoppingCart className="mr-2" />
               Adicionar
@@ -129,7 +129,7 @@ const ProductItem = ({ id, image, title, category = "", price, popularity, stock
       <div className="p-4 flex flex-col flex-grow">
         {/* Título */}
         <Link to={`/product/${id}`} className="mb-2">
-          <h3 className="text-dark font-medium line-clamp-2 min-h-[40px] group-hover:text-green-600 transition-colors">
+          <h3 className="text-dark font-medium line-clamp-2 min-h-[40px] group-hover:text-primary transition-colors">
             {title}
           </h3>
         </Link>
@@ -139,7 +139,7 @@ const ProductItem = ({ id, image, title, category = "", price, popularity, stock
           {stock > 0 ? (
             <div className="flex flex-col">
               <div className="flex items-baseline mb-1">
-                <span className="text-lg font-bold text-green-700">{formatPrice(price)}</span>
+                <span className="text-lg font-bold text-primary">{formatPrice(price)}</span>
                 {featured && (
                   <span className="ml-2 text-xs line-through text-gray-500">
                     {new Intl.NumberFormat('pt-BR', {
@@ -159,7 +159,7 @@ const ProductItem = ({ id, image, title, category = "", price, popularity, stock
           {stock > 0 && (
             <button 
               onClick={handleAddToCart}
-              className="w-full bg-green-600 text-white py-2 rounded-md mt-3 flex items-center justify-center hover:bg-green-700 transition md:hidden"
+              className="w-full bg-primary text-white py-2 rounded-md mt-3 flex items-center justify-center hover:bg-secondary transition md:hidden"
             >
               <HiOutlineShoppingCart className="mr-2" />
               Adicionar

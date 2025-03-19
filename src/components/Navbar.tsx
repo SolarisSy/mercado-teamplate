@@ -27,23 +27,23 @@ const Navbar = () => {
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
           {/* Logo */}
-          <Link to="/" className="text-2xl font-bold text-secondaryBrown">
-            Fashion
+          <Link to="/" className="text-2xl font-bold text-primary">
+            Apoio Entrega
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex space-x-8">
-            <Link to="/" className="text-gray-800 hover:text-secondaryBrown">
+            <Link to="/" className="text-gray-800 hover:text-primary">
               Home
             </Link>
             <div className="relative group">
-              <button className="text-gray-800 hover:text-secondaryBrown">
+              <button className="text-gray-800 hover:text-primary">
                 Shop
               </button>
               <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg rounded-md overflow-hidden z-10 hidden group-hover:block">
                 <Link
                   to="/shop"
-                  className="block px-4 py-2 text-gray-800 hover:bg-secondaryBrown hover:text-white"
+                  className="block px-4 py-2 text-gray-800 hover:bg-primary hover:text-white"
                 >
                   All Products
                 </Link>
@@ -51,22 +51,22 @@ const Navbar = () => {
                   <Link
                     key={category.id}
                     to={`/shop/${category.slug}`}
-                    className="block px-4 py-2 text-gray-800 hover:bg-secondaryBrown hover:text-white"
+                    className="block px-4 py-2 text-gray-800 hover:bg-primary hover:text-white"
                   >
                     {category.name}
                   </Link>
                 ))}
               </div>
             </div>
-            <Link to="/cart" className="text-gray-800 hover:text-secondaryBrown flex items-center">
+            <Link to="/cart" className="text-gray-800 hover:text-primary flex items-center">
               Cart
               {totalItems > 0 && (
-                <span className="ml-1 bg-secondaryBrown text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="ml-1 bg-secondary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                   {totalItems}
                 </span>
               )}
             </Link>
-            <Link to="/login" className="text-gray-800 hover:text-secondaryBrown">
+            <Link to="/login" className="text-gray-800 hover:text-primary">
               Login
             </Link>
           </div>
@@ -79,7 +79,7 @@ const Navbar = () => {
                 placeholder="Search products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondaryBrown"
+                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <button
                 type="submit"
@@ -146,7 +146,7 @@ const Navbar = () => {
                   placeholder="Search products..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondaryBrown"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <button
                   type="submit"
@@ -173,7 +173,7 @@ const Navbar = () => {
             <div className="flex flex-col space-y-2">
               <Link
                 to="/"
-                className="text-gray-800 hover:text-secondaryBrown py-2"
+                className="text-gray-800 hover:text-primary py-2"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Home
@@ -183,7 +183,7 @@ const Navbar = () => {
                 <div className="pl-4 flex flex-col space-y-1">
                   <Link
                     to="/shop"
-                    className="text-gray-800 hover:text-secondaryBrown"
+                    className="text-gray-800 hover:text-primary"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     All Products
@@ -192,7 +192,7 @@ const Navbar = () => {
                     <Link
                       key={category.id}
                       to={`/shop/${category.slug}`}
-                      className="text-gray-800 hover:text-secondaryBrown"
+                      className="text-gray-800 hover:text-primary"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       {category.name}
@@ -202,19 +202,19 @@ const Navbar = () => {
               </div>
               <Link
                 to="/cart"
-                className="text-gray-800 hover:text-secondaryBrown py-2 flex items-center"
+                className="text-gray-800 hover:text-primary py-2 flex items-center"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Cart
                 {totalItems > 0 && (
-                  <span className="ml-2 bg-secondaryBrown text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className="ml-2 bg-secondary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {totalItems}
                   </span>
                 )}
               </Link>
               <Link
                 to="/login"
-                className="text-gray-800 hover:text-secondaryBrown py-2"
+                className="text-gray-800 hover:text-primary py-2"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Login
