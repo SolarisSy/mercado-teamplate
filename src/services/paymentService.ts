@@ -19,6 +19,14 @@ interface CartItem {
   color?: string;
 }
 
+// Possíveis status de pagamento
+export enum PaymentStatus {
+  PENDING = 'pending',
+  PAID = 'paid',
+  EXPIRED = 'expired',
+  FAILED = 'failed'
+}
+
 // Atualizar a interface para refletir a estrutura real da resposta da API
 interface PaymentResponse {
   event: string;
@@ -49,13 +57,13 @@ class PaymentService {
    * @param customerData Dados do cliente
    * @param cartItems Itens do carrinho
    * @param totalAmount Valor total da compra
-   * @returns Objeto com o QR code e código PIX para copiar e colar
+   * @returns Objeto com o QR code, código PIX para copiar e colar, e o hash da transação
    */
   async generatePixPayment(
     customerData: CustomerData,
     cartItems: CartItem[],
     totalAmount: number
-  ): Promise<{ qrCodeString: string; copyPasteCode: string }> {
+  ): Promise<{ qrCodeString: string; copyPasteCode: string; transactionHash: string }> {
     try {
       console.log('[PaymentService] Iniciando geração de PIX');
       
@@ -140,6 +148,7 @@ class PaymentService {
         // Verificar se a resposta foi bem-sucedida e extrair os dados do PIX
         let qrCodeString = '';
         let copyPasteCode = '';
+        const transactionHash = response.data.hash || `demo-${Date.now()}`;
 
         // Verificar se o QR code está diretamente no objeto pix
         if (response.data.pix?.pix_qr_code) {
@@ -185,7 +194,7 @@ class PaymentService {
         // Registrar a venda
         await this.registerSale(amountInCents / 100, requestBody.cart[0].title);
 
-        return { qrCodeString, copyPasteCode };
+        return { qrCodeString, copyPasteCode, transactionHash };
       } catch (apiError) {
         console.error('[PaymentService] Erro na chamada da API:', apiError);
         
@@ -195,10 +204,12 @@ class PaymentService {
         
         const demoQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PIX_DEMO_${Date.now()}`;
         const demoCopyPaste = `00020126330014BR.GOV.BCB.PIX0111123456789012520400005303986540510.005802BR5915Test%20Merchant6008Sao%20Paulo62180514PIX_DEMO_123456304EE5C`;
+        const demoHash = `demo-${Date.now()}`;
         
         return { 
           qrCodeString: demoQrCode, 
-          copyPasteCode: demoCopyPaste 
+          copyPasteCode: demoCopyPaste,
+          transactionHash: demoHash
         };
       }
     } catch (error: any) {
@@ -210,11 +221,122 @@ class PaymentService {
       
       const demoQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PIX_DEMO_${Date.now()}`;
       const demoCopyPaste = `00020126330014BR.GOV.BCB.PIX0111123456789012520400005303986540510.005802BR5915Test%20Merchant6008Sao%20Paulo62180514PIX_DEMO_123456304EE5C`;
+      const demoHash = `demo-${Date.now()}`;
       
       return { 
         qrCodeString: demoQrCode, 
-        copyPasteCode: demoCopyPaste 
+        copyPasteCode: demoCopyPaste,
+        transactionHash: demoHash
       };
+    }
+  }
+
+  /**
+   * Verifica o status de um pagamento
+   * @param transactionHash Hash da transação a ser verificada
+   * @returns Status do pagamento (pending, paid, expired, failed)
+   */
+  async checkPaymentStatus(transactionHash: string): Promise<PaymentStatus> {
+    try {
+      console.log(`[PaymentService] Verificando status do pagamento: ${transactionHash}`);
+      
+      // Se for um hash de demonstração, simular uma resposta para testes
+      if (transactionHash.startsWith('demo-')) {
+        // Simular diferentes tempos de resposta para o pagamento
+        // 20% de chance de pagamento confirmado, 80% de chance de pendente
+        const randomValue = Math.random();
+        
+        // Simular um atraso na resposta
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        if (randomValue < 0.2) {
+          console.log('[PaymentService] Simulação: Pagamento confirmado');
+          return PaymentStatus.PAID;
+        } else {
+          console.log('[PaymentService] Simulação: Pagamento pendente');
+          return PaymentStatus.PENDING;
+        }
+      }
+      
+      // Em produção, faria uma requisição para a API para verificar o status
+      try {
+        const response = await axios.get<PaymentResponse>(
+          `${this.apiUrl}/${transactionHash}?api_token=${this.apiToken}`,
+          {
+            headers: {
+              "Accept": "application/json"
+            }
+          }
+        );
+        
+        console.log('[PaymentService] Status do pagamento:', response.data.payment_status);
+        
+        // Mapear o status retornado pela API para nossos status internos
+        switch (response.data.payment_status?.toLowerCase()) {
+          case 'paid':
+          case 'confirmed':
+          case 'approved':
+          case 'completed':
+            return PaymentStatus.PAID;
+          case 'expired':
+          case 'canceled':
+          case 'cancelled':
+            return PaymentStatus.EXPIRED;
+          case 'failed':
+          case 'error':
+          case 'rejected':
+            return PaymentStatus.FAILED;
+          case 'pending':
+          case 'waiting':
+          case 'processing':
+          default:
+            return PaymentStatus.PENDING;
+        }
+      } catch (apiError) {
+        console.error('[PaymentService] Erro ao verificar status na API:', apiError);
+        
+        // Em caso de erro na API, simular uma resposta para não bloquear o fluxo
+        // Em um ambiente de produção, você deve tratar o erro adequadamente
+        
+        // Se o erro incluir alguma informação sobre o status, tentar extrair
+        const errorResponse = (apiError as any)?.response?.data;
+        if (errorResponse?.payment_status) {
+          return this.mapApiStatusToPaymentStatus(errorResponse.payment_status);
+        }
+        
+        return PaymentStatus.PENDING;
+      }
+    } catch (error) {
+      console.error('[PaymentService] Erro ao verificar status do pagamento:', error);
+      return PaymentStatus.PENDING;
+    }
+  }
+  
+  /**
+   * Mapeia um status da API para o nosso enum interno
+   * @param apiStatus Status retornado pela API
+   * @returns Status de pagamento mapeado
+   */
+  private mapApiStatusToPaymentStatus(apiStatus: string): PaymentStatus {
+    switch (apiStatus.toLowerCase()) {
+      case 'paid':
+      case 'confirmed':
+      case 'approved':
+      case 'completed':
+        return PaymentStatus.PAID;
+      case 'expired':
+      case 'canceled':
+      case 'cancelled':
+        return PaymentStatus.EXPIRED;
+      case 'failed':
+      case 'error':
+      case 'rejected':
+        return PaymentStatus.FAILED;
+      case 'pending':
+      case 'waiting':
+      case 'processing':
+      default:
+        return PaymentStatus.PENDING;
     }
   }
 

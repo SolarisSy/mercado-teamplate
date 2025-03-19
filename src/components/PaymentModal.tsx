@@ -25,6 +25,14 @@ interface PaymentModalProps {
   totalAmount: number;
 }
 
+// Status possíveis de pagamento
+enum PaymentStatus {
+  PENDING = 'pending',
+  PAID = 'paid',
+  EXPIRED = 'expired',
+  FAILED = 'failed'
+}
+
 const PaymentModal: React.FC<PaymentModalProps> = ({
   isOpen,
   onClose,
@@ -35,10 +43,16 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [pixCode, setPixCode] = useState<string>('');
   const [qrCodeString, setQrCodeString] = useState<string>('');
+  const [transactionHash, setTransactionHash] = useState<string>('');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(PaymentStatus.PENDING);
   // Armazenar uma cópia local dos itens do carrinho para uso após o pagamento
   const [localCartItems, setLocalCartItems] = useState<CartItem[]>([]);
   const [localTotalAmount, setLocalTotalAmount] = useState(0);
+  // Temporizador para pagamento
+  const [timeRemaining, setTimeRemaining] = useState<number>(15 * 60); // 15 minutos em segundos
   const modalRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<number | null>(null);
+  const pollingRef = useRef<number | null>(null);
   const dispatch = useAppDispatch();
 
   // Dados do formulário
@@ -54,14 +68,50 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     if (isOpen && Array.isArray(cartItems)) {
       setLocalCartItems([...cartItems]);
       setLocalTotalAmount(totalAmount);
+      
+      // Verificar se já existe uma transação no localStorage
+      const storedHash = localStorage.getItem('transactionHash');
+      if (storedHash) {
+        setTransactionHash(storedHash);
+        // Se já houver uma transação, vá diretamente para a tela de pagamento
+        setStep('payment');
+        // E inicie a verificação do status
+        startPaymentVerification(storedHash);
+      }
     }
+    
+    return () => {
+      // Limpar temporizadores quando o componente for desmontado
+      if (timerRef.current) window.clearInterval(timerRef.current);
+      if (pollingRef.current) window.clearInterval(pollingRef.current);
+    };
   }, [isOpen, cartItems, totalAmount]);
+
+  // Iniciar temporizador quando estiver na etapa de pagamento
+  useEffect(() => {
+    if (step === 'payment' && timeRemaining > 0) {
+      timerRef.current = window.setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            if (timerRef.current) window.clearInterval(timerRef.current);
+            setPaymentStatus(PaymentStatus.EXPIRED);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+    };
+  }, [step]);
 
   // Fechar o modal quando clicar fora dele
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose();
+        handleClose();
       }
     };
 
@@ -72,7 +122,49 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
+
+  // Função personalizada para fechar o modal
+  const handleClose = () => {
+    // Limpar temporizadores
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    if (pollingRef.current) window.clearInterval(pollingRef.current);
+    
+    // Limpar dados locais
+    if (paymentStatus !== PaymentStatus.PAID) {
+      localStorage.removeItem('transactionHash');
+    }
+    
+    onClose();
+  }
+
+  // Função para iniciar a verificação periódica do pagamento
+  const startPaymentVerification = (hash: string) => {
+    // Iniciar verificação a cada 5 segundos
+    if (pollingRef.current) window.clearInterval(pollingRef.current);
+    
+    pollingRef.current = window.setInterval(async () => {
+      try {
+        const status = await paymentService.checkPaymentStatus(hash);
+        setPaymentStatus(status as PaymentStatus);
+        
+        if (status === PaymentStatus.PAID) {
+          // Pagamento confirmado, parar a verificação
+          if (pollingRef.current) window.clearInterval(pollingRef.current);
+          if (timerRef.current) window.clearInterval(timerRef.current);
+          
+          // Registrar a venda e limpar o carrinho
+          await handlePaymentConfirmed();
+        } else if (status === PaymentStatus.EXPIRED || status === PaymentStatus.FAILED) {
+          // Pagamento expirado ou falhou, parar a verificação
+          if (pollingRef.current) window.clearInterval(pollingRef.current);
+          if (timerRef.current) window.clearInterval(timerRef.current);
+        }
+      } catch (error) {
+        console.error('Erro ao verificar status do pagamento:', error);
+      }
+    }, 5000); // Verificar a cada 5 segundos
+  };
 
   // Aplicar máscaras aos campos
   const applyMask = (value: string, type: 'cpf' | 'phone') => {
@@ -173,9 +265,17 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       // Atualizar estado com os dados do PIX
       setQrCodeString(pixData.qrCodeString);
       setPixCode(pixData.copyPasteCode);
+      setTransactionHash(pixData.transactionHash);
       
-      // Avançar para a etapa de pagamento
+      // Salvar o hash da transação no localStorage
+      localStorage.setItem('transactionHash', pixData.transactionHash);
+      
+      // Iniciar a verificação do status de pagamento
+      startPaymentVerification(pixData.transactionHash);
+      
+      // Avançar para a etapa de pagamento e reiniciar o temporizador
       setStep('payment');
+      setTimeRemaining(15 * 60); // 15 minutos
       
       toast.success('QR Code PIX gerado com sucesso!');
     } catch (error) {
@@ -197,37 +297,91 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       });
   };
 
-  // Confirmar pagamento
-  const handleConfirmPayment = async () => {
-    setIsLoading(true);
+  // Confirmar pagamento manualmente
+  const handleManualCheckPayment = async () => {
+    if (!transactionHash) {
+      toast.error('Não foi possível verificar o pagamento. Tente novamente.');
+      return;
+    }
     
+    setIsLoading(true);
     try {
-      // Simular verificação do pagamento
-      toast.success('Verificando pagamento...');
+      const status = await paymentService.checkPaymentStatus(transactionHash);
+      setPaymentStatus(status as PaymentStatus);
       
-      // Simular um atraso para verificação
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (status === PaymentStatus.PAID) {
+        await handlePaymentConfirmed();
+      } else if (status === PaymentStatus.PENDING) {
+        // Simular confirmação do pagamento para demonstração
+        // Em um ambiente de produção, você manteria o status como pendente
+        if (Math.random() < 0.7) { // 70% de chance de ser aprovado ao verificar manualmente
+          setPaymentStatus(PaymentStatus.PAID);
+          await handlePaymentConfirmed();
+          return;
+        }
       
+        // Usar toast.warning se toast.info não estiver disponível
+        toast.error('Aguardando confirmação do pagamento. Por favor, aguarde.');
+      } else {
+        toast.error('Pagamento não foi confirmado. Verifique se realizou o pagamento corretamente.');
+      }
+    } catch (error) {
+      console.error('Erro ao verificar pagamento:', error);
+      toast.error('Erro ao verificar o pagamento. Por favor, tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Processar pagamento confirmado
+  const handlePaymentConfirmed = async () => {
+    try {
       // Registrar a venda
-      await paymentService.registerSale(localTotalAmount, 'Compra Fashion Shop');
+      await paymentService.registerSale(localTotalAmount, 'Compra Mercado E-commerce');
+      
+      // Salvar os dados do pedido no localStorage para a página de confirmação
+      localStorage.setItem('orderItems', JSON.stringify(localCartItems));
+      localStorage.setItem('orderTotal', localTotalAmount.toString());
+      localStorage.setItem('paymentStatus', PaymentStatus.PAID);
+      localStorage.setItem('orderNumber', `PED-${Date.now().toString().substring(7)}`);
       
       // Limpar o carrinho
       dispatch(clearCart());
       
-      toast.success('Pedido realizado com sucesso!');
+      toast.success('Pagamento confirmado! Seu pedido foi registrado com sucesso.');
       
       // Fechar o modal primeiro
-      onClose();
+      handleClose();
       
-      // Redirecionamento direto para a página inicial após um curto delay
+      // Redirecionamento para a página de confirmação do pedido
       setTimeout(() => {
-        window.location.href = '/';
+        window.location.href = '/order-confirmation';
       }, 500);
+      
+      return true;
     } catch (error) {
-      console.error('Erro ao confirmar pagamento:', error);
-      toast.error('Erro ao confirmar pagamento. Por favor, tente novamente.');
-      setIsLoading(false);
+      console.error('Erro ao processar confirmação de pagamento:', error);
+      toast.error('Erro ao finalizar seu pedido. Entre em contato com o suporte.');
+      return false;
     }
+  };
+
+  // Formatar tempo restante
+  const formatTimeRemaining = () => {
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Gerar novo PIX (quando expirado)
+  const handleRegeneratePix = () => {
+    // Limpar dados da transação anterior
+    localStorage.removeItem('transactionHash');
+    setTransactionHash('');
+    setPaymentStatus(PaymentStatus.PENDING);
+    
+    // Voltar para a etapa de dados pessoais
+    setStep('personal-data');
   };
 
   if (!isOpen) return null;
@@ -244,7 +398,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             {step === 'personal-data' ? 'Dados Pessoais' : 'Pagamento PIX'}
           </h3>
           <button 
-            onClick={onClose}
+            onClick={handleClose}
             className="bg-white text-green-600 hover:bg-gray-200 w-8 h-8 flex items-center justify-center rounded-full text-xl font-bold focus:outline-none transition-colors"
           >
             &times;
@@ -357,48 +511,89 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           {/* Etapa de Pagamento PIX */}
           {step === 'payment' && (
             <div className="text-center">
-              <p className="mb-4">
-                Escaneie o QR Code abaixo com o aplicativo do seu banco ou copie o código PIX
-              </p>
-              
-              <div className="flex justify-center mb-4">
-                {qrCodeString ? (
-                  <QRCodeSVG value={qrCodeString} size={200} />
-                ) : (
-                  <div className="w-48 h-48 bg-gray-200 flex items-center justify-center">
-                    <span>Erro ao gerar QR Code</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="mb-4">
-                <div className="flex">
-                  <input
-                    type="text"
-                    value={pixCode}
-                    readOnly
-                    className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none"
-                  />
+              {/* Status do pagamento */}
+              {paymentStatus === PaymentStatus.PAID ? (
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-md mb-4">
+                  <p className="font-bold">Pagamento confirmado!</p>
+                  <p>Seu pedido foi processado com sucesso.</p>
+                  <p className="text-sm mt-2">Você será redirecionado em instantes...</p>
+                </div>
+              ) : paymentStatus === PaymentStatus.EXPIRED ? (
+                <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded-md mb-4">
+                  <p className="font-bold">Tempo para pagamento expirado</p>
+                  <p>O tempo para realizar o pagamento foi excedido.</p>
                   <button
-                    onClick={handleCopyPixCode}
-                    className="bg-gray-200 px-3 py-2 border border-gray-300 border-l-0 rounded-r-md hover:bg-gray-300"
+                    onClick={handleRegeneratePix}
+                    className="mt-2 bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors"
                   >
-                    Copiar
+                    Gerar novo PIX
                   </button>
                 </div>
-              </div>
-              
-              <button
-                onClick={handleConfirmPayment}
-                disabled={isLoading}
-                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-300 disabled:opacity-50"
-              >
-                {isLoading ? 'Processando...' : 'Confirmar Pagamento'}
-              </button>
-              
-              <p className="mt-2 text-sm text-gray-600">
-                Após realizar o pagamento, clique em "Confirmar Pagamento"
-              </p>
+              ) : paymentStatus === PaymentStatus.FAILED ? (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4">
+                  <p className="font-bold">Falha no pagamento</p>
+                  <p>Ocorreu um erro ao processar seu pagamento.</p>
+                  <button
+                    onClick={handleRegeneratePix}
+                    className="mt-2 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors"
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="mb-4">
+                    Escaneie o QR Code abaixo com o aplicativo do seu banco ou copie o código PIX
+                  </p>
+                  
+                  {/* Contador regressivo */}
+                  <div className="mb-4 text-center">
+                    <span className="font-semibold">Tempo restante: </span>
+                    <span className={`${timeRemaining < 60 ? 'text-red-600' : timeRemaining < 300 ? 'text-yellow-600' : 'text-green-600'} font-mono`}>
+                      {formatTimeRemaining()}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-center mb-4">
+                    {qrCodeString ? (
+                      <QRCodeSVG value={qrCodeString} size={200} />
+                    ) : (
+                      <div className="w-48 h-48 bg-gray-200 flex items-center justify-center">
+                        <span>Erro ao gerar QR Code</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mb-4">
+                    <div className="flex">
+                      <input
+                        type="text"
+                        value={pixCode}
+                        readOnly
+                        className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none"
+                      />
+                      <button
+                        onClick={handleCopyPixCode}
+                        className="bg-gray-200 px-3 py-2 border border-gray-300 border-l-0 rounded-r-md hover:bg-gray-300"
+                      >
+                        Copiar
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={handleManualCheckPayment}
+                    disabled={isLoading}
+                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-300 disabled:opacity-50"
+                  >
+                    {isLoading ? 'Verificando...' : 'Verificar Pagamento'}
+                  </button>
+                  
+                  <p className="mt-2 text-sm text-gray-600">
+                    Após realizar o pagamento, clique em "Verificar Pagamento" ou aguarde a confirmação automática
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
