@@ -29,6 +29,17 @@ export const uploadImages = async (files: File[]): Promise<string[]> => {
   }
 };
 
+// Verifica se uma URL de imagem é válida, retornando uma Promise que resolve para true se válida
+// ou rejeita com erro se inválida
+export const validateImageUrl = (url: string): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => reject(new Error('URL de imagem inválida ou inacessível'));
+    img.src = url;
+  });
+};
+
 // Simula a exclusão de uma imagem do serviço de armazenamento
 export const deleteImage = async (imageUrl: string): Promise<boolean> => {
   // Em um ambiente real, aqui você faria a exclusão da imagem do serviço

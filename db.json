@@ -746,6 +746,38 @@
         "fat": 22,
         "sodium": 22
       }
+    },
+    {
+      "id": "df44",
+      "title": "Xiaomi Poco X6 Mi Band",
+      "description": "asda",
+      "category": "cat4",
+      "price": 22,
+      "stock": 2,
+      "popularity": 2,
+      "featured": true,
+      "image": "https://www.comprerural.com/wp-content/uploads/2017/12/carne-bovina-41.jpg",
+      "images": [
+        {
+          "id": "mfpCbqmvJI6pwh68eYzZU",
+          "url": "https://www.comprerural.com/wp-content/uploads/2017/12/carne-bovina-41.jpg",
+          "isPrimary": true
+        }
+      ],
+      "weight": 22,
+      "unit": "g",
+      "brand": "22",
+      "isOrganic": false,
+      "expiryDate": "2025-03-27",
+      "origin": "w22",
+      "discount": 32,
+      "nutritionalInfo": {
+        "calories": 22,
+        "protein": 22,
+        "carbs": 22,
+        "fat": 22,
+        "sodium": 22
+      }
     }
   ],
   "carousel": [

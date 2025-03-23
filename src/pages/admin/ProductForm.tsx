@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { nanoid } from 'nanoid';
 import { HiPlus, HiX } from 'react-icons/hi';
 import { Product, ProductImage } from '../../types/product';
-import { uploadImages } from '../../services/imageService';
+import { uploadImages, validateImageUrl } from '../../services/imageService';
 import { useCategories } from '../../context/CategoryContext';
 
 const ProductForm = () => {
@@ -43,6 +43,7 @@ const ProductForm = () => {
   const [images, setImages] = React.useState<ProductImage[]>([]);
   const [imageFiles, setImageFiles] = React.useState<File[]>([]);
   const [primaryImageIndex, setPrimaryImageIndex] = React.useState(0);
+  const [imageUrl, setImageUrl] = React.useState('');
   
   const [isLoading, setIsLoading] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -131,6 +132,42 @@ const ProductForm = () => {
     }
   };
 
+  const handleAddImageUrl = async () => {
+    if (!imageUrl.trim()) {
+      toast.error('Por favor, informe uma URL de imagem válida');
+      return;
+    }
+    
+    // Validar se parece ser uma URL
+    try {
+      new URL(imageUrl);
+      
+      // Adicionar indicador de carregamento
+      const loadingToast = toast.loading('Verificando URL da imagem...');
+      
+      try {
+        // Validar se a URL da imagem é acessível e válida
+        await validateImageUrl(imageUrl);
+        
+        const newImage = {
+          id: nanoid(),
+          url: imageUrl,
+          isPrimary: images.length === 0 // Se for a primeira imagem, será a principal
+        };
+        
+        setImages(prev => [...prev, newImage]);
+        setImageUrl(''); // Limpar o campo após adicionar
+        toast.dismiss(loadingToast);
+        toast.success('Imagem adicionada com sucesso');
+      } catch (error) {
+        toast.dismiss(loadingToast);
+        toast.error('URL de imagem inacessível ou inválida. Verifique se a URL leva diretamente a uma imagem.');
+      }
+    } catch (e) {
+      toast.error('URL inválida. Por favor, forneça uma URL completa (começando com http:// ou https://)');
+    }
+  };
+
   const handleRemoveImage = (index: number) => {
     // If removing the primary image, set another one as primary
     if (images[index].isPrimary && images.length > 1) {
@@ -149,8 +186,13 @@ const ProductForm = () => {
   };
 
   const handleSetPrimaryImage = (index: number) => {
-    setImages(images.map((img, i) => ({ ...img, isPrimary: i === index })));
+    const newImages = images.map((img, i) => ({ 
+      ...img, 
+      isPrimary: i === index 
+    }));
+    setImages(newImages);
     setPrimaryImageIndex(index);
+    toast.success('Imagem principal definida com sucesso');
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -214,15 +256,16 @@ const ProductForm = () => {
       
       if (isEditMode) {
         await customFetch.put(`/products/${id}`, productData);
-        toast.success('Product updated successfully');
+        toast.success('Produto atualizado com sucesso');
       } else {
         await customFetch.post('/products', productData);
-        toast.success('Product created successfully');
+        toast.success('Produto criado com sucesso');
       }
       
       navigate('/admin/products');
     } catch (error) {
-      toast.error(isEditMode ? 'Failed to update product' : 'Failed to create product');
+      toast.error(isEditMode ? 'Falha ao atualizar produto' : 'Falha ao criar produto');
+      console.error('Error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -534,7 +577,7 @@ const ProductForm = () => {
           
           <div className="mb-4">
             <label className="block text-gray-700 mb-1">
-              Product Images <span className="text-gray-500">(First image will be the main image)</span>
+              Upload de Imagem <span className="text-gray-500">(A primeira imagem será a principal)</span>
             </label>
             <input
               type="file"
@@ -545,6 +588,28 @@ const ProductForm = () => {
             />
           </div>
           
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-1">
+              Adicionar Imagem por URL
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                placeholder="https://exemplo.com/imagem.jpg"
+                className="border border-gray-300 rounded-md px-3 py-2 flex-grow"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={handleAddImageUrl}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                <HiPlus className="inline mr-1" /> Adicionar
+              </button>
+            </div>
+          </div>
+          
           {images.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
               {images.map((img, index) => (
@@ -553,6 +618,10 @@ const ProductForm = () => {
                     src={img.url}
                     alt={`Product ${index + 1}`}
                     className="w-full h-40 object-cover"
+                    onError={(e) => {
+                      // Tratamento para imagens quebradas
+                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=Imagem+Indisponível';
+                    }}
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                     <button
@@ -561,15 +630,15 @@ const ProductForm = () => {
                         img.isPrimary ? 'bg-green-500' : 'bg-gray-700'
                       } text-white`}
                       onClick={() => handleSetPrimaryImage(index)}
-                      title={img.isPrimary ? 'Primary Image' : 'Set as Primary'}
+                      title={img.isPrimary ? 'Imagem Principal' : 'Definir como Principal'}
                     >
-                      {img.isPrimary ? 'Primary' : 'Set as Primary'}
+                      {img.isPrimary ? 'Principal' : 'Definir como Principal'}
                     </button>
                     <button
                       type="button"
                       className="p-2 rounded-full bg-red-600 text-white"
                       onClick={() => handleRemoveImage(index)}
-                      title="Remove Image"
+                      title="Remover Imagem"
                     >
                       <HiX />
                     </button>
@@ -586,14 +655,14 @@ const ProductForm = () => {
             onClick={() => navigate('/admin/products')}
             className="px-4 py-2 bg-gray-300 rounded-md"
           >
-            Cancel
+            Cancelar
           </button>
           <button
             type="submit"
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving...' : isEditMode ? 'Update Product' : 'Create Product'}
+            {isSubmitting ? 'Salvando...' : isEditMode ? 'Atualizar Produto' : 'Criar Produto'}
           </button>
         </div>
       </form>

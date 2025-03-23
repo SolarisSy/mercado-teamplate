@@ -347,3 +347,37 @@
 - Implementar testes automatizados para garantir que a filtragem por categoria continue funcionando corretamente
 - Considerar a adição de filtros adicionais (preço, marca, disponibilidade, etc.)
 - Melhorar a performance das requisições usando técnicas de cache para categorias já visitadas
+
+## 2024-06-14 - Implementação de Upload de Imagens via URL no Painel Admin
+
+### Dupla Opção de Upload de Imagens (Arquivo e URL)
+- **O que foi feito**: Implementação de funcionalidade que permite aos administradores adicionar imagens aos produtos tanto via upload de arquivos quanto através de URLs da web.
+- **Por quê**: A funcionalidade anterior só permitia upload de arquivos locais, limitando a flexibilidade dos administradores que muitas vezes já possuem imagens hospedadas em outros serviços online.
+- **Impacto**: Maior flexibilidade para os administradores na gestão de imagens de produtos, permitindo aproveitar imagens já hospedadas na web sem necessidade de download e re-upload.
+
+### Detalhes da Implementação
+1. **Adição de campo para URL de imagem**
+   - Implementação de um novo campo de entrada para URLs de imagem
+   - Botão específico para adicionar a imagem a partir da URL informada
+   - Validação para garantir que a URL seja válida e aponte para uma imagem acessível
+
+2. **Validação de URLs de imagem**
+   - Verificação dupla de URLs: primeiro verifica se é uma URL válida, depois se é uma imagem acessível
+   - Implementação da função `validateImageUrl` que testa se uma URL aponta para uma imagem carregável
+   - Feedback visual durante o processo de validação com indicadores de carregamento
+
+3. **Tratamento de erros aprimorado**
+   - Mensagens de erro específicas para diferentes tipos de problemas (URL inválida, imagem inacessível)
+   - Prevenção de erros 404 com tratamento para URLs quebradas no momento da exibição
+   - Feedback imediato para o usuário em caso de problemas durante o upload
+
+### Resultado
+- Os administradores agora podem escolher entre fazer upload de arquivos locais ou utilizar URLs existentes
+- A interface do painel administrativo está mais flexível e prática para gestão de produtos
+- O sistema é capaz de validar URLs de imagens antes de adicioná-las, evitando problemas futuros
+- Todas as mensagens da interface foram traduzidas para português-BR conforme as regras do projeto
+
+### Próximos Passos
+- Considerar a implementação de uma biblioteca de imagens para reutilização entre produtos
+- Avaliar a possibilidade de integração com serviços de CDN para otimização de imagens
+- Implementar visualização prévia da imagem antes da confirmação do upload por URL
