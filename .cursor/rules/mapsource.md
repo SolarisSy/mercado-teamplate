@@ -1,150 +1,433 @@
-# Mapa da Estrutura do Projeto
+### [2025-03-22]
 
-## Visão Geral
-Este projeto é um e-commerce de mercado (template) construído com React.js, TypeScript e JSON server. A aplicação possui funcionalidades para clientes (loja online) e também um painel administrativo.
+**Função mapeada:** getUsers()
+**Localização:** src/users/users.service.ts
 
-## Tecnologias Principais
-- **Frontend**: React.js, TypeScript, TailwindCSS
-- **Gerenciamento de Estado**: Redux Toolkit, React Context API
-- **Roteamento**: React Router Dom
-- **Backend Simulado**: JSON Server
-- **Outras Bibliotecas**: Axios, Firebase, React Hot Toast
+**Descrição da função:**  
+Consulta usuários no banco com filtros opcionais (`name`, `status`) e retorna dados paginados.
 
-## Estrutura de Diretórios
+**Relacionamentos:**  
+- Chama: `UserRepository.find()`  
+- É chamada por: `UsersController.getAllUsers()`  
+- Depende de: `GetUsersQueryDto`, `PaginationOptionsDto`
 
-### Raiz do Projeto
-- `src/` - Código fonte principal
-- `public/` - Arquivos estáticos
-- `dist/` - Arquivos compilados para produção
-- `.cursor/` - Arquivos de configuração do Cursor IDE
-- Arquivos de configuração: `vite.config.ts`, `tailwind.config.js`, etc.
+**Status:** Nova
+---
 
-### Diretório `src/`
-- `actions/` - Ações para formulários e outras operações
-- `assets/` - Recursos estáticos (imagens, ícones)
-- `axios/` - Configurações do cliente HTTP Axios
-- `components/` - Componentes reutilizáveis
-- `context/` - Contextos do React para gerenciamento de estado
-- `data/` - Dados ou mocks utilizados pela aplicação
-- `features/` - Features organizadas por funcionalidade
-- `firebase/` - Configuração e serviços do Firebase
-- `hooks/` - Hooks personalizados
-- `pages/` - Componentes de página
-- `redux/` - Configuração e slices do Redux
-- `services/` - Serviços para chamadas de API e lógica de negócios
-- `types/` - Definições de tipos TypeScript
-- `utils/` - Funções utilitárias
+**Função mapeada:** getAllUsers()
+**Localização:** src/users/users.controller.ts
 
-## Principais Componentes
+**Descrição da função:**  
+Recebe requisição GET `/users`, aplica filtros e paginação, e retorna lista formatada com DTO.
 
-### Arquivos de Configuração
-- `App.tsx` - Componente principal, configura o roteamento da aplicação
-- `main.tsx` - Ponto de entrada da aplicação
-- `store.ts` - Configuração da store do Redux
-- `typings.d.ts` - Definições de tipos globais
+**Relacionamentos:**  
+- Chama: `UsersService.getUsers()`  
+- É chamada por: Rota HTTP  
+- Depende de: NestJS Query Parameters, Swagger decorators
 
-### Componentes de UI
-- `components/Button.tsx` - Componente de botão reutilizável
-- `components/Navbar.tsx` - Barra de navegação
-- `components/Footer.tsx` - Rodapé
-- `components/ProductItem.tsx` - Item de produto para listagens
-- `components/ProductGrid.tsx` - Grid para exibição de produtos
-- `components/PaymentModal.tsx` - Modal para processamento de pagamentos
+**Status:** Nova
+---
 
-### Páginas
-- `pages/Landing.tsx` - Página inicial
-- `pages/Shop.tsx` - Página de listagem de produtos
-- `pages/SingleProduct.tsx` - Página de detalhes do produto
-- `pages/Cart.tsx` - Página do carrinho de compras
-- `pages/Checkout.tsx` - Página de checkout
-- `pages/Login.tsx` - Página de login
-- `pages/Register.tsx` - Página de registro
-- `pages/UserProfile.tsx` - Perfil do usuário
-- `pages/OrderHistory.tsx` - Histórico de pedidos
+**Classe mapeada:** GetUsersQueryDto
+**Localização:** src/users/dto/get-users-query.dto.ts
 
-### Páginas de Administração
-- `pages/admin/AdminLogin.tsx` - Login do painel admin
-- `pages/admin/AdminDashboard.tsx` - Layout do painel admin
-- `pages/admin/DashboardHome.tsx` - Página inicial do painel
-- `pages/admin/ProductsList.tsx` - Gerenciamento de produtos
-- `pages/admin/ProductForm.tsx` - Formulário para criar/editar produtos
-- `pages/admin/CategoriesManager.tsx` - Gerenciamento de categorias
+**Descrição da classe:**  
+DTO para validação e tipagem dos parâmetros de consulta na rota GET `/users`.
 
-### Contextos
-- `context/AuthContext.tsx` - Contexto de autenticação de usuários
-- `context/AdminAuthContext.tsx` - Contexto de autenticação admin
-- `context/CategoryContext.tsx` - Gerenciamento de categorias
-- `context/TrackingContext.tsx` - Rastreamento de ações do usuário
+**Relacionamentos:**  
+- Usada por: `UsersController.getAllUsers()`
+- Estende: `PaginationOptionsDto` (para parâmetros de paginação)
 
-## Protocolos de Comunicação
+**Status:** Nova
+---
 
-### Cliente-Servidor
-1. **API RESTful (JSON Server)**
-   - **Endpoint**: `/products` - Lista todos os produtos
-   - **Endpoint**: `/products/:id` - Detalhes de um produto específico
-   - **Endpoint**: `/categories` - Lista todas as categorias
-   - **Endpoint**: `/users` - Gerenciamento de usuários
-   - **Endpoint**: `/orders` - Gerenciamento de pedidos
-   - **Suporte a Paginação**: `?_page=1&_limit=12` - Controla paginação de resultados
-   - **Filtros**: `?category=1` - Filtragem por categoria
-   - **Ordenação**: `?_sort=price&_order=desc` - Ordenação de resultados
+**Classe mapeada:** UserResponseDto
+**Localização:** src/users/dto/user-response.dto.ts
 
-2. **Interceptores Axios**
-   - `customFetch.ts` - Configura interceptores para requisições e respostas
-   - Adiciona cabeçalhos padrão como Authorization
-   - Manipula erros de forma centralizada
-   - Normaliza formatos de resposta para consumo pelo frontend
+**Descrição da classe:**  
+DTO para formatação da resposta com dados de usuário na API.
 
-3. **WebSockets (Firebase)**
-   - Atualizações em tempo real de status de pedidos
-   - Notificações para usuários e administradores
-   - Sincronização de carrinho entre dispositivos
+**Relacionamentos:**  
+- Usada por: `UsersController.getAllUsers()`
+- Mapeia: `UserEntity` para resposta da API
 
-### Comunicação entre Componentes
-1. **Redux Store**
-   - `cartSlice` - Gerencia o estado do carrinho de compras
-   - `userSlice` - Gerencia informações do usuário logado
-   - `productSlice` - Gerencia a lista de produtos e detalhes
-   - Dispatchers padronizados para alteração de estado
+**Status:** Nova
 
-2. **React Context API**
-   - Compartilhamento de estado entre componentes relacionados
-   - Gerencia estados globais de UI (tema, visibilidade de elementos)
-   - Fornece acesso a serviços compartilhados
+### [2025-03-23]
 
-3. **Props e Eventos**
-   - Passagem de dados de componentes pais para filhos
-   - Emissão de eventos de componentes filhos para pais
-   - Uso de TypeScript para garantir tipagem correta
+**Módulo mapeado:** ScraperModule
+**Localização:** src/scraper/scraper.module.ts
 
-## Estrutura do Banco de Dados (db.json)
+**Descrição do módulo:**  
+Módulo responsável pela funcionalidade de scraping do site www.apoioentrega.com.
 
-### Entidades Principais
-- **categories** - Categorias de produtos
-- **products** - Produtos disponíveis
-- **users** - Usuários do sistema
-- **orders** - Pedidos realizados
+**Componentes:**
+- ScraperController: Controla as rotas de acesso ao scraper
+- ScraperService: Implementa a lógica de extração de dados
+- HarAnalyzerService: Analisa arquivos HAR para identificar endpoints relevantes
+- ProductExtractorService: Extrai informações de produtos das APIs identificadas
+- CacheService: Gerencia cache de requisições para evitar duplicidade
+
+**Status:** Novo
+---
+
+**Função mapeada:** analyzeHarFile()
+**Localização:** src/scraper/services/har-analyzer.service.ts
+
+**Descrição da função:**  
+Analisa o arquivo HAR para identificar endpoints de API relevantes.
+
+**Relacionamentos:**  
+- É chamada por: `ScraperService.initialize()`
+- Retorna: Lista de endpoints categorizados por tipo (produto, imagem, etc.)
+
+**Status:** Nova
+---
+
+**Função mapeada:** extractProducts()
+**Localização:** src/scraper/services/product-extractor.service.ts
+
+**Descrição da função:**  
+Extrai informações de produtos a partir dos endpoints identificados.
+
+**Relacionamentos:**  
+- Chama: APIs externas do site alvo
+- É chamada por: `ScraperController.getProducts()`
+- Utiliza: `CacheService` para armazenar resultados
+
+**Status:** Nova
+---
+
+**Entidade mapeada:** ScrapedProductDto
+**Localização:** src/scraper/dto/scraped-product.dto.ts
+
+**Descrição da classe:**  
+DTO para armazenar e validar os dados extraídos dos produtos.
+
+**Campos:**
+- id: Identificador único do produto
+- name: Nome do produto
+- imageUrls: Array com URLs das imagens
+- price: Preço do produto
+- description: Descrição do produto
+- category: Categoria do produto
+
+**Status:** Nova
+
+# Mapa do Código-Fonte
+
+## Visão geral
+Este documento mapeia os principais componentes do sistema, suas responsabilidades e relacionamentos.
+
+## Módulos Principais
+
+### [ScraperModule]
+**Categoria:** Extração de dados
+**Localização:** `src/scraper/`
+
+**Descrição:**  
+Módulo responsável por extrair produtos e imagens de www.apoioentrega.com e disponibilizá-los para importação no sistema da loja.
+
+**Componentes:**
+- `controller.js` - Controlador principal que gerencia as APIs de extração e importação de produtos
+- `CacheService` - Serviço de cache para minimizar requisições e aumentar performance
+- `ProductExtractorService` - Serviço especializado em extrair dados de produtos
+- `ScrapedProductDto` - Modelo de dados para produtos extraídos
+
+**APIs Expostas:**
+- GET `/scraper/products` - Lista todos os produtos extraídos
+- GET `/scraper/products/:id` - Obtém detalhes de um produto específico
+- POST `/api/import-product` - Importa um produto específico para o sistema (via requisição direta)
+- GET `/api-test` - Endpoint de teste para validar funcionamento do scraper
+
+**Dependências:**
+- Axios para requisições HTTP
+- Sistema de caching em memória
+
+### [AutoImportSystem]
+**Categoria:** Importação automática
+**Localização:** `src/scraper/controller.js`
+
+**Descrição:**
+Sistema responsável por executar importação automática de produtos em intervalos regulares, verificar duplicatas e gerenciar o processo de importação.
+
+**Componentes:**
+- `autoImportProcessor` - Função que gerencia o ciclo de vida da importação automática
+- `autoImportTimer` - Timer que executa a importação em intervalos regulares
+- `autoImportStatus` - Objeto que mantém o estado atual do sistema de importação
+- `productMemory` - Sistema de memória para evitar importação de produtos duplicados
+
+**APIs Expostas:**
+- POST `/scraper/auto-import/start` - Inicia a importação automática
+- POST `/scraper/auto-import/stop` - Para a importação automática
+- GET `/scraper/auto-import/status` - Verifica o status atual da importação
+- POST `/scraper/auto-import/run-now` - Força uma execução imediata da importação
+
+**Dependências:**
+- ScraperModule para extração de produtos
+- ProductService para persistência de produtos no sistema
+
+### [AdminModule]
+**Categoria:** Administrativo
+**Localização:** `src/pages/admin/`
+
+**Descrição:**  
+Interface administrativa para gerenciamento da loja online.
+
+**Componentes:**
+- `AdminDashboard.tsx` - Dashboard principal com visão geral do sistema
+- `ProductsPage.tsx` - Página de gerenciamento de produtos
+- `CategoriesPage.tsx` - Página de gerenciamento de categorias
+- `UsersPage.tsx` - Página de gerenciamento de usuários
+- `ProductImporter.tsx` - Interface para importação manual e automática de produtos
+
+**Rotas:**
+- `/admin` - Dashboard principal
+- `/admin/products` - Gerenciamento de produtos
+- `/admin/categories` - Gerenciamento de categorias
+- `/admin/users` - Gerenciamento de usuários
+- `/admin/importer` - Sistema de importação de produtos
+
+### [CoreComponents]
+**Categoria:** Componentes reutilizáveis
+**Localização:** `src/components/`
+
+**Descrição:**  
+Componentes reutilizáveis por todo o sistema.
+
+**Componentes:**
+- `Header.tsx` - Cabeçalho da aplicação
+- `Footer.tsx` - Rodapé da aplicação
+- `ProductCard.tsx` - Card para exibição de produtos
+- `ScraperProductsList.tsx` - Lista de produtos extraídos com controles de importação
+- `AutoImportControl.tsx` - Controles para a importação automática de produtos
+
+### [AuthModule]
+**Categoria:** Autenticação
+**Localização:** `src/auth/`
+
+**Descrição:**  
+Módulo responsável pela autenticação e autorização no sistema.
+
+**Componentes:**
+- `AuthContext.tsx` - Contexto React para gerenciamento do estado de autenticação
+- `LoginPage.tsx` - Página de login
+- `RegisterPage.tsx` - Página de registro
+- `auth.service.ts` - Serviço com lógica de autenticação
+
+**Rotas:**
+- `/login` - Login de usuários
+- `/register` - Registro de novos usuários
 
 ## Fluxos Principais
-1. **Navegação e Compra**:
-   - Visualização de produtos
-   - Adição ao carrinho
-   - Checkout
-   - Processamento de pagamento
-   - Confirmação de pedido
-   
-2. **Autenticação**:
-   - Registro de usuário
-   - Login/Logout
-   - Perfil do usuário
-   - Histórico de pedidos
 
-3. **Painel Administrativo**:
-   - Gerenciamento de produtos
-   - Gerenciamento de categorias
-   - Visualização de métricas
-   - Gerenciamento de conteúdo (banners, carrossel)
+### [Fluxo de Extração e Importação]
+1. O usuário acessa `/admin/importer`
+2. O sistema exibe produtos disponíveis para importação do site www.apoioentrega.com
+3. O usuário pode:
+   a. Selecionar produtos e importar manualmente
+   b. Ativar a importação automática
+4. Produtos importados são adicionados ao catálogo da loja
 
-## APIs e Serviços
-- **JSON Server** - Serve como backend simulado para dados
-- **Firebase** - Integração para recursos adicionais (autenticação, armazenamento) 
+### [Fluxo de Importação Automática]
+1. O sistema verifica novos produtos a cada 5 minutos
+2. Para cada produto encontrado:
+   a. Verifica se já existe no sistema (evita duplicatas)
+   b. Extrai todas as informações necessárias
+   c. Importa para o catálogo da loja
+3. O painel de controle exibe estatísticas em tempo real do processo
+
+### Controller (src/scraper/controller.js)
+
+**Funções:**
+- `importProductToStore(scraperProduct)`: Importa um produto do scraper para a loja
+  - Parâmetros:
+    - `scraperProduct`: Objeto com dados do produto a ser importado
+  - Validações:
+    - Verifica existência e formato dos dados obrigatórios
+    - Valida URLs de imagens e preserva URLs do apoioentrega
+    - Garante que a resposta da API contém os dados esperados
+  - Retorno:
+    - Sucesso: Objeto com ID do produto importado
+    - Erro: Objeto com detalhes do erro encontrado
+
+### ScraperProductsList (src/components/ScraperProductsList.tsx)
+
+**Componente:**
+- Responsável por exibir e gerenciar a lista de produtos do scraper
+- Implementa a interface de importação de produtos
+
+**Funções:**
+- `importProduct(product)`: Prepara e envia produto para importação
+  - Validações:
+    - Verifica dados obrigatórios (título, preço, categoria)
+    - Valida formato do preço
+    - Verifica URLs de imagens
+  - Tratamento de erros:
+    - 400: Dados inválidos ou mal formatados
+    - 409: Produto duplicado
+    - 500: Erro interno do servidor
+    - Outros: Erros de rede ou desconhecidos
+
+**Helpers:**
+- `getLocalImageUrl(url)`: Processa URLs de imagens
+  - Preserva URLs do apoioentrega
+  - Retorna URL local para outras imagens
+- `validateProduct(product)`: Valida dados do produto antes do envio
+  - Verifica campos obrigatórios
+  - Valida formato dos dados
+  - Retorna objeto com resultado da validação
+
+### [ImportSystem]
+**Categoria:** Importação de Produtos
+**Localização:** `src/scraper/controller.js`
+
+**Descrição:**
+Sistema responsável por importar produtos do apoioentrega.com e gerenciar o processo de importação automática.
+
+**Componentes principais:**
+- `importProductToStore(product)`: Processa e importa um produto para o sistema
+  - Parâmetros:
+    - `product`: Objeto com dados do produto a ser importado
+  - Processamento:
+    - Valida dados obrigatórios
+    - Processa URLs de imagens do apoioentrega
+    - Preserva URLs originais no banco de dados
+    - Adiciona campos de rastreamento
+  - Retorno:
+    - Objeto do produto formatado e salvo
+
+- `extractProducts(limit)`: Extrai produtos do site alvo
+  - Parâmetros:
+    - `limit`: Número máximo de produtos a extrair
+  - Processamento:
+    - Busca produtos na API do apoioentrega
+    - Extrai informações relevantes
+    - Formata dados para importação
+  - Retorno:
+    - Array de produtos extraídos
+
+**Estrutura de dados:**
+- Produto no db.json:
+  ```json
+  {
+    "id": "imported_[ID]",
+    "title": "string",
+    "description": "string",
+    "price": number,
+    "category": "string",
+    "image": "string", // Imagem principal
+    "images": ["string"], // Todas as imagens
+    "stock": number,
+    "source": "apoioentrega",
+    "importedAt": "ISO date",
+    "originalId": "string",
+    "originalImages": ["string"], // URLs originais preservadas
+    "lastUpdated": "ISO date"
+  }
+  ```
+
+**APIs Expostas:**
+- POST `/api/import-product` - Importação individual de produtos
+- POST `/scraper/auto-import/start` - Inicia importação automática
+- POST `/scraper/auto-import/stop` - Para importação automática
+- GET `/scraper/auto-import/status` - Status da importação
+- POST `/scraper/auto-import/run-now` - Força importação imediata
+
+**Dependências:**
+- Express.js para rotas
+- Axios para requisições HTTP
+- NodeCache para caching de produtos
+- db.json para persistência de dados
+
+**Status:** Atualizado
+
+### [ProductItem]
+**Categoria:** Componentes
+**Localização:** `src/components/ProductItem.tsx`
+
+**Descrição:**
+Componente React responsável por exibir um produto na interface, com suporte especial para imagens do apoioentrega.
+
+**Props:**
+- `product`: Objeto completo do produto
+- Props individuais para compatibilidade:
+  - `id`: ID do produto
+  - `title`: Título do produto
+  - `price`: Preço do produto
+  - `image`: URL da imagem principal
+  - `category`: Categoria do produto
+  - Outras props opcionais...
+
+**Funcionalidades:**
+- Exibição de imagens:
+  - Usa `image` como fonte principal
+  - Fallback para `images[0]` se necessário
+  - Preserva URLs do apoioentrega
+  - Trata erros de carregamento com fallbacks
+  - Suporta troca de protocolo HTTP/HTTPS
+
+- Badges e indicadores:
+  - Ofertas
+  - Produtos novos
+  - Produtos orgânicos
+  - Status de estoque
+  - Descontos
+
+**Dependências:**
+- React Router para navegação
+- Redux para gerenciamento de estado
+- imageUtils para processamento de imagens
+
+**Status:** Atualizado
+
+### [ImageHelpers]
+**Categoria:** Utilitários
+**Localização:** `src/utils/imageHelpers.ts`
+
+**Descrição:**
+Módulo de utilitários para manipulação de imagens no sistema, fornecendo funções auxiliares para tratamento de URLs de imagens e fallbacks.
+
+**Funções principais:**
+- `getProductMainImage(product)`: Obtém a URL da imagem principal de um produto
+  - Parâmetros:
+    - `product`: Objeto do produto
+  - Processamento:
+    - Verifica imagem principal
+    - Tenta primeira imagem da lista
+    - Usa fallback se necessário
+  - Retorno:
+    - URL da imagem ou placeholder
+
+- `getCategoryImage(category)`: Obtém a URL da imagem de uma categoria
+  - Parâmetros:
+    - `category`: Nome da categoria
+  - Processamento:
+    - Busca imagem da categoria
+    - Usa fallback se necessário
+  - Retorno:
+    - URL da imagem ou placeholder
+
+- `isValidImageUrl(url)`: Verifica se uma URL é válida
+  - Parâmetros:
+    - `url`: URL a ser verificada
+  - Retorno:
+    - `true` se a URL é válida
+
+- `isImageUrl(url)`: Verifica se uma URL é de uma imagem
+  - Parâmetros:
+    - `url`: URL a ser verificada
+  - Retorno:
+    - `true` se a URL tem extensão de imagem
+
+- `isPlaceholderUrl(url)`: Verifica se uma URL é um placeholder
+  - Parâmetros:
+    - `url`: URL a ser verificada
+  - Retorno:
+    - `true` se a URL é um placeholder
+
+**Dependências:**
+- `imageUtils.ts` para processamento de URLs
+- `typings.d.ts` para tipos do sistema
+
+**Status:** Atualizado

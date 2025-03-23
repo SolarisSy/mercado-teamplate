@@ -11,7 +11,8 @@ import {
   HiOutlineChartBar,
   HiOutlineMenu,
   HiOutlineX,
-  HiOutlineShoppingCart
+  HiOutlineShoppingCart,
+  HiOutlineDownload
 } from 'react-icons/hi';
 
 const AdminDashboard = () => {
@@ -78,6 +79,18 @@ const AdminDashboard = () => {
             >
               <HiOutlineShoppingBag className={`text-xl ${isActive('/admin/products') ? 'text-secondaryBrown' : ''}`} />
               {isSidebarOpen && <span className="ml-3">Produtos</span>}
+            </Link>
+            
+            <Link 
+              to="/admin/importer" 
+              className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                isActive('/admin/importer') 
+                  ? 'bg-secondaryBrown bg-opacity-10 text-secondaryBrown' 
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <HiOutlineDownload className={`text-xl ${isActive('/admin/importer') ? 'text-secondaryBrown' : ''}`} />
+              {isSidebarOpen && <span className="ml-3">Importar Produtos</span>}
             </Link>
             
             <Link 
@@ -174,6 +187,7 @@ const AdminDashboard = () => {
                 {location.pathname.includes('/admin/carousel') && 'Gerenciamento de Carrossel'}
                 {location.pathname.includes('/admin/tracking') && 'Rastreamento'}
                 {location.pathname.includes('/admin/users') && 'Gerenciamento de Usuários'}
+                {location.pathname.includes('/admin/importer') && 'Importar Produtos'}
               </h1>
             </div>
             

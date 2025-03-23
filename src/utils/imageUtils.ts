@@ -1,6 +1,10 @@
 /**
  * Utilitários para manipulação de imagens
+ * REFATORADO PARA GARANTIR A PRESERVAÇÃO DE URLS ORIGINAIS DE IMAGENS
  */
+
+// Imagem de fallback padrão (local)
+const DEFAULT_PLACEHOLDER = "/img/placeholder-product.jpg";
 
 // Mapeamento de URLs externas para caminhos de imagem locais
 const imageMap: Record<string, string> = {
@@ -24,27 +28,22 @@ const imageMap: Record<string, string> = {
   "https://images.unsplash.com/photo-1610348725531-843dff563e2c": "/img/placeholder-product.jpg",
   "https://images.unsplash.com/photo-1573246123716-6b1782bfc499": "/img/placeholder-banner.jpg",
   "https://images.unsplash.com/photo-1628689469838-524a4a973b8e": "/img/placeholder-product.jpg",
-  "https://images.unsplash.com/photo-1583608564372-3e5e46a9e05d": "/img/placeholder-product.jpg",
-  
-  // URLs da apoioentrega no formato que está no db.json
-  "https://www.apoioentrega.com/Hamburguer-Imperio-Bovino-56g/p": "/img/salsicha-hotdog-perdigao-1kg.jpg",
-  "https://www.apoioentrega.com/Coxinha-Asa-Frango-Rivelli-800g-iqf-Cong/p": "/img/coracao-de-frango-bandeja-seara-1kg.jpg",
-  "https://www.apoioentrega.com/Salsicha-Rezende-Hotdog-1Kg/p": "/img/salsicha-hotdog-perdigao-1kg.jpg",
-  "https://www.apoioentrega.com/Empanado-de-Frango-Tradicional-Perdigao-Mini-Chicken-Pacote-1kg/p": "/img/3469-kibe-congelado-feito-com-carne-bovina-sadia-c.jpg",
-  "https://www.apoioentrega.com/File-De-Frango-Congelado-In-Natura-1Kg/p": "/img/-file-de-peito-de-frango-tropeira-desfiado-tempera.jpg",
-  "https://www.apoioentrega.com/Moela-de-Frango-Ave-Nova-800g/p": "/img/coracao-de-frango-bandeja-seara-1kg.jpg",
-  "https://www.apoioentrega.com/Recorte-File-Mignon-1Kg/p": "/img/file-mignon-bovino-sem-cordao-peca-1kg.jpg",
-  "https://www.apoioentrega.com/Carne-Moida-Tudbom-Congelada-500g/p": "/img/219704-copa-lombo-moido-apreco-resfriado-450g.jpg",
-  "https://www.apoioentrega.com/File-de-Peito-de-Frango-Rivelli-Congelado-bandeja-1-kg/p": "/img/-file-de-peito-de-frango-tropeira-desfiado-tempera.jpg",
-  "https://www.apoioentrega.com/Peixe-Piramutaba-Posta-Congelado-1Kg/p": "/img/226635-file-salmao-noronha-congelado-500g.jpg",
-  "https://www.apoioentrega.com/Linguica-tipo-calabresa-Seara-400g-2pc/p": "/img/184447-linguica-toscana-com-alho-e-ervas-perdigao-.jpg",
-  "https://www.apoioentrega.com/Salsicha-Congelada-Hotdog-Sadia-1Kg/p": "/img/salsicha-hotdog-perdigao-1kg.jpg",
-  "https://www.apoioentrega.com/Filezinho-De-Frango-Sassimi-1k/p": "/img/-file-de-peito-de-frango-tropeira-desfiado-tempera.jpg",
-  "https://www.apoioentrega.com/Figado-De-Frango-Bom-Todo-800g/p": "/img/coracao-de-frango-bandeja-seara-1kg.jpg",
-  "https://www.apoioentrega.com/File-de-Peito-de-Frango-Nat-Congelado-Kg/p": "/img/-file-de-peito-de-frango-tropeira-desfiado-tempera.jpg"
+  "https://images.unsplash.com/photo-1583608564372-3e5e46a9e05d": "/img/placeholder-product.jpg"
 };
 
-// Mapeamento de fallback por categoria para produtos não mapeados
+// Mapeamento de palavras-chave em produtos para imagens (usado quando a URL falha e não temos categoria)
+const keywordImageMap: Record<string, string> = {
+  "frango": "/img/-file-de-peito-de-frango-tropeira-desfiado-tempera.jpg",
+  "carne": "/img/file-mignon-bovino-sem-cordao-peca-1kg.jpg",
+  "bovina": "/img/file-mignon-bovino-sem-cordao-peca-1kg.jpg",
+  "peixe": "/img/226635-file-salmao-noronha-congelado-500g.jpg",
+  "pescado": "/img/226635-file-salmao-noronha-congelado-500g.jpg",
+  "bebida": "/img/placeholder-product.jpg",
+  "limpeza": "/img/placeholder-product.jpg",
+  "higiene": "/img/placeholder-product.jpg"
+};
+
+// Mapeamento de categorias para imagens fallback
 const categoryImageMap: Record<string, string> = {
   "carnes": "/img/file-mignon-bovino-sem-cordao-peca-1kg.jpg",
   "aves": "/img/-file-de-peito-de-frango-tropeira-desfiado-tempera.jpg",
@@ -57,30 +56,19 @@ const categoryImageMap: Record<string, string> = {
   "açougue": "/img/file-mignon-bovino-sem-cordao-peca-1kg.jpg",
   "hortifruti": "/img/placeholder-product.jpg",
   "padaria": "/img/placeholder-product.jpg",
-  "congelados": "/img/3469-kibe-congelado-feito-com-carne-bovina-sadia-c.jpg",
-  "frios": "/img/177634-salame-11g-de-proteina-original-sadia-salam.jpg"
+  "congelados": "/img/placeholder-product.jpg",
+  "frios": "/img/placeholder-product.jpg",
+  "utilidades": "/img/placeholder-product.jpg",
+  "bazar": "/img/placeholder-product.jpg"
 };
 
-// Mapeamento de palavras-chave em produtos para imagens (usado quando a URL falha e não temos categoria)
-const keywordImageMap: Record<string, string> = {
-  "frango": "/img/-file-de-peito-de-frango-tropeira-desfiado-tempera.jpg",
-  "carne": "/img/file-mignon-bovino-sem-cordao-peca-1kg.jpg",
-  "bovina": "/img/file-mignon-bovino-sem-cordao-peca-1kg.jpg",
-  "peixe": "/img/226635-file-salmao-noronha-congelado-500g.jpg",
-  "pescado": "/img/226635-file-salmao-noronha-congelado-500g.jpg",
-  "banana": "/img/placeholder-product.jpg",
-  "maçã": "/img/placeholder-product.jpg",
-  "leite": "/img/placeholder-product.jpg",
-  "queijo": "/img/placeholder-product.jpg",
-  "arroz": "/img/placeholder-product.jpg",
-  "feijão": "/img/placeholder-product.jpg",
-  "picanha": "/img/114739-picanha-tradicional-peca-1kg.jpg",
-  "linguiça": "/img/184447-linguica-toscana-com-alho-e-ervas-perdigao-.jpg",
-  "salsicha": "/img/salsicha-hotdog-perdigao-1kg.jpg"
-};
-
-// Imagem de fallback para quando não encontrar nenhuma correspondência
-const DEFAULT_IMAGE = "/img/placeholder-product.jpg";
+/**
+ * Verifica se uma URL é de apoioentrega.vteximg.com.br
+ * Esta função foi criada para centralizar a lógica de detecção
+ */
+function isApoioEntregaImageUrl(url: string): boolean {
+  return Boolean(url && typeof url === 'string' && url.includes('apoioentrega.vteximg.com.br'));
+}
 
 /**
  * Obtém a URL da imagem local correspondente a um termo (nome de produto ou categoria)
@@ -89,7 +77,7 @@ const DEFAULT_IMAGE = "/img/placeholder-product.jpg";
  * @returns URL da imagem local mais adequada para o termo
  */
 function getImageForTerm(term: string): string {
-  if (!term) return DEFAULT_IMAGE;
+  if (!term) return DEFAULT_PLACEHOLDER;
   
   const termLower = term.toLowerCase();
   
@@ -107,19 +95,38 @@ function getImageForTerm(term: string): string {
     }
   }
   
-  return DEFAULT_IMAGE;
+  return DEFAULT_PLACEHOLDER;
 }
 
 /**
  * Converte uma URL de imagem externa para uma URL local correspondente
  * 
- * @param url A URL da imagem original (possivelmente externa)
+ * @param url A URL da imagem original
  * @param productName Nome do produto (opcional, usado para fallback inteligente)
  * @param category Categoria do produto (opcional, usado para fallback inteligente)
- * @returns A URL local correspondente ou a URL original se não houver mapeamento
+ * @returns A URL original para apoioentrega.vteximg.com.br ou uma URL local correspondente para outras fontes
  */
 export function getLocalImageUrl(url: string, productName?: string, category?: string): string {
-  // Se a URL já é local (começa com /), retorná-la como está
+  // VERIFICAÇÃO DE SEGURANÇA: verificar se a URL é válida
+  if (!url || typeof url !== 'string') {
+    return getFallbackImage(productName, category);
+  }
+  
+  // REGRA PRINCIPAL: PRESERVAR URLS DE APOIOENTREGA.VTEXIMG.COM.BR
+  if (isApoioEntregaImageUrl(url)) {
+    // Tentar usar HTTP se a URL não tem protocolo
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `http://${url}`;
+    }
+    
+    // Remover parâmetros desnecessários que podem causar problemas
+    const cleanUrl = url.split('?')[0];
+    
+    console.log(`PRESERVANDO URL ORIGINAL DO APOIOENTREGA: ${cleanUrl}`);
+    return cleanUrl;
+  }
+  
+  // Se já é uma URL local, retornar sem modificação
   if (url.startsWith('/')) {
     return url;
   }
@@ -129,84 +136,66 @@ export function getLocalImageUrl(url: string, productName?: string, category?: s
     return url;
   }
   
-  // Remover parâmetros de consulta das URLs do Unsplash para comparação
-  const baseUrl = url.split('?')[0];
-  
-  // Verificar se temos um mapeamento para esta URL base
-  const localUrl = imageMap[baseUrl] || imageMap[url];
-  
-  if (localUrl) {
-    return localUrl;
+  // Se tem extensão de imagem e não é um placeholder externo, tentar usar diretamente
+  if (url.match(/\.(jpeg|jpg|gif|png)$/i) && !url.includes('placeholder.com')) {
+    return url;
   }
   
-  // Tentar encontrar correspondência parcial para URLs similares
-  for (const [externalUrl, localPath] of Object.entries(imageMap)) {
-    // Comparar sem os parâmetros de consulta
-    const externalBaseUrl = externalUrl.split('?')[0];
-    if (baseUrl.includes(externalBaseUrl) || externalBaseUrl.includes(baseUrl)) {
-      return localPath;
-    }
-  }
-  
-  // Verificar URL por categoria de produto fornecida
-  if (category && categoryImageMap[category.toLowerCase()]) {
-    return categoryImageMap[category.toLowerCase()];
-  }
-  
-  // Usar informações de produto/categoria para tentar encontrar uma imagem adequada
+  // Fallback: tentar encontrar uma imagem baseada no nome ou categoria
+  return getFallbackImage(productName, category);
+}
+
+/**
+ * Obtém uma imagem de fallback baseada no nome do produto e categoria
+ * 
+ * @param productName Nome do produto
+ * @param category Categoria do produto
+ * @returns URL de uma imagem de fallback adequada
+ */
+function getFallbackImage(productName?: string, category?: string): string {
+  // 1. Tentar pelo nome do produto
   if (productName) {
-    const termImageUrl = getImageForTerm(productName);
-    if (termImageUrl !== DEFAULT_IMAGE) {
-      return termImageUrl;
+    const productImage = getImageForTerm(productName);
+    if (productImage !== DEFAULT_PLACEHOLDER) {
+      return productImage;
     }
   }
   
+  // 2. Tentar pela categoria
   if (category) {
-    const termImageUrl = getImageForTerm(category);
-    if (termImageUrl !== DEFAULT_IMAGE) {
-      return termImageUrl;
+    const categoryLower = category.toLowerCase();
+    
+    // Verificar se temos um mapeamento direto para esta categoria
+    if (categoryImageMap[categoryLower]) {
+      return categoryImageMap[categoryLower];
+    }
+    
+    // Tentar correspondência parcial com a categoria
+    const categoryImage = getImageForTerm(category);
+    if (categoryImage !== DEFAULT_PLACEHOLDER) {
+      return categoryImage;
     }
   }
   
-  // Se nenhuma correspondência for encontrada, registrar um aviso e retornar a URL original
-  console.warn(`Imagem não mapeada: ${url}`);
-  
-  // Verificar se é uma URL do Unsplash ou apoioentrega que não temos mapeada
-  if (url.startsWith('https://images.unsplash.com/') || 
-      url.startsWith('https://www.apoioentrega.com/')) {
-    console.warn(`Usando imagem de fallback para ${url}`);
-    return DEFAULT_IMAGE; // Usar imagem de fallback para estas fontes conhecidas que estão falhando
-  }
-  
-  // Tentar acessar diretamente a URL (implementação alternativa)
-  // Como estamos em um ambiente de navegador, não podemos verificar facilmente se a URL está acessível
-  // sem fazer uma requisição real, o que poderia causar problemas de desempenho
-  
-  return url; // Retornar a URL original se não for de uma fonte conhecida que está falhando
+  // 3. Usar imagem padrão como último recurso
+  return DEFAULT_PLACEHOLDER;
 }
 
 /**
  * Precarrega as imagens mais comuns para evitar problemas de carregamento
- * quando elas forem necessárias
  */
 export function preloadCommonImages(): void {
-  // Array com caminhos das imagens mais comumente usadas
   const commonImages = [
-    '/img/placeholder-product.jpg',
-    '/img/file-mignon-bovino-sem-cordao-peca-1kg.jpg',
-    '/img/-file-de-peito-de-frango-tropeira-desfiado-tempera.jpg',
-    '/img/226635-file-salmao-noronha-congelado-500g.jpg',
-    '/img/coracao-de-frango-bandeja-seara-1kg.jpg',
-    '/img/salsicha-hotdog-perdigao-1kg.jpg',
-    '/img/114739-picanha-tradicional-peca-1kg.jpg',
+    DEFAULT_PLACEHOLDER,
+    "/img/placeholder-product.jpg",
+    "/img/file-mignon-bovino-sem-cordao-peca-1kg.jpg",
+    "/img/-file-de-peito-de-frango-tropeira-desfiado-tempera.jpg",
+    "/img/226635-file-salmao-noronha-congelado-500g.jpg"
   ];
   
-  // Precarregar cada imagem
   commonImages.forEach(src => {
     const img = new Image();
     img.src = src;
-    // Não precisamos adicionar ao DOM, apenas criar o objeto Image
-    // e definir a src já inicia o download em segundo plano
   });
   
   console.log('Imagens comuns pré-carregadas');

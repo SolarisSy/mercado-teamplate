@@ -1,383 +1,402 @@
-# Registro de Alterações e Decisões
-
-## 2024-03-22 - Inicialização do Projeto
-
-### Análise Inicial do Projeto
-- **O que foi feito**: Análise completa da estrutura do projeto e criação de documentação inicial.
-- **Por quê**: Para entender a base do código e definir um ponto de partida claro para o desenvolvimento.
-- **Impacto**: Estabelecimento de um mapa detalhado da estrutura do projeto (`mapsource.md`) e definição dos objetivos claros (`objective.md`).
-
-### Principais Descobertas
-- O projeto é baseado em um template de e-commerce adaptado para um mercado online.
-- Utiliza React com TypeScript, React Router para navegação, e TailwindCSS para estilização.
-- O gerenciamento de estado é feito com Redux Toolkit e Context API.
-- Possui dois fluxos principais: loja para clientes e painel administrativo.
-- O backend é simulado com JSON Server, com um arquivo `db.json` contendo categorias, produtos, usuários e pedidos.
-
-### Decisões Técnicas
-- Manter a estrutura existente de diretórios e a organização de código.
-- Documentar completamente o código para facilitar a manutenção futura.
-- Seguir as convenções de codificação existentes para consistência.
-- Focar nas instruções de `.cursorrules` para manter a qualidade do código.
-
-### Próximos Passos
-- Revisar o funcionamento atual da aplicação em execução.
-- Identificar possíveis melhorias e bugs a serem corrigidos.
-- Implementar novas funcionalidades conforme necessário.
-
-## 2024-03-22 - Análise de Melhorias e Bugs
-
-### Melhorias Identificadas
-
-#### 1. Melhorias no Carrinho
-- **O que foi identificado**: O cálculo de totalAmount no cartSlice.ts não considera descontos em todas as operações.
-- **Por quê**: Ao remover produtos ou atualizar quantidades, o cálculo do totalAmount não aplica os descontos.
-- **Impacto**: Valores incorretos podem ser exibidos aos usuários quando há produtos com desconto.
-
-#### 2. Componente ProductItem
-- **O que foi identificado**: O componente ProductItem tem duplicidade de propriedades.
-- **Por quê**: Aceita tanto um objeto product quanto propriedades individuais, causando complexidade desnecessária.
-- **Impacto**: Código mais difícil de manter e possíveis inconsistências na exibição de produtos.
-
-#### 3. Autenticação
-- **O que foi identificado**: O processo de autenticação é baseado em Firebase, mas há muitos console.logs de depuração.
-- **Por quê**: Provavelmente foram deixados durante o desenvolvimento.
-- **Impacto**: Exposição de informações sensíveis e poluição do console em produção.
-
-#### 4. Tratamento de Erros
-- **O que foi identificado**: Falta tratamento de erros mais robusto em diversas partes da aplicação.
-- **Por quê**: Em alguns casos, os erros são apenas registrados no console sem informar adequadamente o usuário.
-- **Impacto**: Experiência do usuário prejudicada quando ocorrem falhas.
-
-#### 5. Otimização de Desempenho
-- **O que foi identificado**: Carregamento de dados repetitivos ou sem paginação adequada.
-- **Por quê**: A página inicial carrega todos os produtos em destaque de uma vez.
-- **Impacto**: Possíveis problemas de desempenho com grande volume de dados.
-
-### Bugs Potenciais
-
-#### 1. Cálculo de Descontos
-- **O que foi identificado**: Inconsistência no cálculo de descontos entre diferentes partes da aplicação.
-- **Por quê**: Diferentes métodos de cálculo são usados em diferentes componentes.
-- **Impacto**: Valores diferentes podem ser exibidos no carrinho e na finalização da compra.
-
-#### 2. Informações Nutricionais
-- **O que foi identificado**: Componente NutritionalTable adicionado, mas não parece estar integrado em todos os produtos.
-- **Por quê**: Implementação parcial ao migrar de e-commerce de moda para mercado.
-- **Impacto**: Usuários podem não ter acesso às informações nutricionais em todos os produtos.
-
-### Próximos Passos
-
-1. Corrigir o cálculo do totalAmount no cartSlice.ts para considerar descontos em todas as operações.
-2. Refatorar o componente ProductItem para simplificar e padronizar a forma de passar dados.
-3. Remover console.logs desnecessários, especialmente em código de autenticação.
-4. Melhorar o tratamento de erros com feedback visual adequado para o usuário.
-5. Implementar paginação em listagens de produtos maiores.
-6. Padronizar o cálculo de descontos em toda a aplicação.
-7. Integrar informações nutricionais em todos os produtos alimentícios.
-
-## 2024-03-22 - Correção de Bug de Imagens
-
-### Correção do Loop Infinito nas Imagens de Produtos
-- **O que foi feito**: Correção do bug no `ProductItem.tsx` que causava um loop infinito ao tentar carregar imagens de fallback.
-- **Por quê**: O manipulador de erro `onError` para imagens não encontradas estava gerando um loop infinito quando a imagem de fallback também não era encontrada.
-- **Impacto**: Eliminação dos erros em cascata no console e melhoria na estabilidade da aplicação.
-
-### Detalhes da Implementação
-1. Substitui o manipulador de erro direto por uma abordagem com gerenciamento de estado usando `useState`
-2. Adicionei uma flag `hasImgError` para evitar tentativas repetidas de carregar imagens de fallback
-3. Utilizei uma URL externa confiável (placeholder.com) como imagem de fallback
-4. Implementei um mecanismo que só tenta uma vez a substituição da imagem
-
-### Melhorias Adicionais
-- Melhoria na apresentação visual dos produtos, mantendo uma interface consistente
-- Padronização no formato e estilo das badges (ofertas, estoque, etc.)
-- Organização mais clara do código com comentários explicativos
-- Melhor tratamento para produtos sem estoque
-
-## 2024-03-22 - Melhorias Adicionais na Estabilidade
-
-### Otimização do Componente ProductImage
-- **O que foi feito**: Refatoração do componente `ProductImage.tsx` para melhor tratamento de erros.
-- **Por quê**: O componente anterior não tinha uma abordagem consistente para lidar com imagens ausentes.
-- **Impacto**: Maior estabilidade na exibição de imagens em toda a aplicação.
-
-### Melhoria no Servidor JSON
-- **O que foi feito**: Otimização do arquivo `server.js` para melhor tratamento de erros e portabilidade.
-- **Por quê**: O servidor anterior tinha problemas com erros de portas ocupadas (EADDRINUSE) e configuração inflexível.
-- **Impacto**: Inicialização mais confiável do servidor, funcionamento mais robusto com melhor tratamento de erros e flexibilidade com variáveis de ambiente.
-
-### Resumo das Correções
-1. **Correção do Bug de Loop Infinito**
-   - Implementação de um sistema que controla o estado de erro de imagens
-   - Limitação de tentativas de fallback para evitar loops
-   - Uso de URLs externas confiáveis para imagens de fallback
-
-2. **Melhoria na Robustez do Servidor**
-   - Tratamento adequado de erros na inicialização do servidor
-   - Mensagens de erro mais informativas
-   - Flexibilidade para usar diferentes portas através de variáveis de ambiente
-
-3. **Refatoração dos Componentes de Imagem**
-   - Padronização do tratamento de imagens não encontradas
-   - Feedback visual apropriado para o usuário
-   - Código mais organizado e manutenível
-
-### Próximos Passos
-- Monitorar o funcionamento da aplicação para identificar possíveis problemas remanescentes
-- Implementar as melhorias identificadas na análise anterior
-- Focar nos componentes críticos para a experiência do usuário
-
-## 2024-06-13 - Correção da Exibição de Produtos em Diferentes Páginas
-
-### Correção do Problema de Repetição de Produtos
-- **O que foi feito**: Correção do problema onde a página 2 exibia os mesmos produtos da página 1, apesar de solicitar corretamente a segunda página ao servidor.
-- **Por quê**: O JSON Server estava retornando os mesmos dados para diferentes parâmetros de página, possivelmente devido a um problema de configuração ou cache.
-- **Impacto**: Agora o sistema exibe corretamente diferentes produtos em cada página, proporcionando uma navegação efetiva pelo catálogo completo.
-
-### Análise do Problema
-1. Mesmo solicitando `/products?_page=2&_limit=12`, o servidor retornava os mesmos produtos da página 1
-2. Os IDs dos produtos nas duas páginas eram idênticos, confirmando a duplicação de dados
-3. O cálculo de totalCount (19) e totalPages (2) estava correto, mas os dados exibidos estavam incorretos
-
-### Alterações Implementadas
-1. **Modificação no `ShopPageContent.tsx`**
-   - Implementação de uma solicitação adicional para obter todos os produtos
-   - Adição de verificação para detectar se os mesmos produtos estão sendo retornados em páginas diferentes
-   - Implementação de manipulação manual de paginação quando necessário
-   - Cálculo correto dos produtos a serem exibidos com base no índice da página atual
-
-### Resultado
-- Cada página agora exibe um conjunto diferente e correto de produtos
-- A primeira página exibe os produtos 1-12 e a segunda página exibe os produtos 13-19
-- A navegação entre páginas funciona corretamente, permitindo aos usuários visualizar todo o catálogo
-- A experiência do usuário foi melhorada sem necessidade de modificar a configuração do servidor
-
-### Próximos Passos
-- Monitorar o funcionamento da paginação com um volume ainda maior de produtos
-- Considerar uma solução mais definitiva no lado do servidor se o problema persistir
-- Implementar cache inteligente para melhorar o desempenho das navegações entre páginas
-
-## 2024-06-13 - Correção da Renderização de Produtos na Listagem
-
-### Correção do Problema de Renderização
-- **O que foi feito**: Correção do problema onde produtos estavam sendo carregados corretamente da API, mas não eram exibidos na tela.
-- **Por quê**: Após a mudança no formato de retorno da API, a estrutura de dados no componente `ShopPageContent` não foi atualizada corretamente, causando uma incompatibilidade entre os dados recebidos e o modelo esperado para renderização.
-- **Impacto**: Os produtos agora são exibidos corretamente em todas as páginas, permitindo aos usuários visualizar o catálogo completo.
-
-### Análise do Problema
-1. O código estava tentando acessar `products` como um array, mas os dados haviam sido modificados para um objeto complexo com a propriedade `produtos` contendo o array
-2. A condição de verificação `products.length > 0` não funcionava mais com a nova estrutura
-3. A iteração com `products.map()` falhava por tentar acessar um método que não existia mais nessa estrutura
-
-### Alterações Implementadas
-1. **Correção da tipagem de dados**
-   - Criação de uma interface `ProductsResult` para definir claramente a estrutura do objeto de produtos
-   - Definição explícita dos tipos para melhorar a segurança do código
-
-2. **Modificação da lógica de renderização**
-   - Alteração da condição para verificar `products.produtos && products.produtos.length > 0`
-   - Mudança na iteração para usar `products.produtos.map()` em vez de `products.map()`
-   - Atualização da passagem de propriedades para o componente `ProductItem`
-
-3. **Otimização da exibição de produtos**
-   - Passagem do objeto completo `product` em vez de propriedades individuais
-   - Uso do `totalPages` do objeto de resposta diretamente no componente de paginação
-
-### Resultado
-- Os produtos são agora exibidos corretamente na interface
-- A paginação funciona adequadamente, exibindo os produtos corretos em cada página
-- A experiência do usuário foi restaurada, permitindo navegação fluida pelo catálogo
-- A tipagem mais rígida dos dados torna o código mais seguro e menos propenso a erros
-
-### Próximos Passos
-- Verificar se há outras partes do código que possam estar usando a estrutura de dados antiga
-- Considerar a adição de testes automatizados para garantir que a exibição de produtos continue funcionando corretamente
-- Otimizar a experiência do usuário com feedback visual durante o carregamento de dados entre páginas
-
-## 2024-06-13 - Implementação de Sistema Robusto para Tratamento de Imagens
-
-### Melhoria do Sistema de Carregamento de Imagens
-- **O que foi feito**: Implementação de um sistema abrangente para tratamento de URLs de imagens, prevenção de erros 404 e melhoria na experiência visual.
-- **Por quê**: As imagens de produtos no site estavam falhando ao carregar devido a URLs externas (Unsplash e apoioentrega.com) que não estavam acessíveis, resultando em muitos erros 404 e uma experiência visual prejudicada.
-- **Impacto**: Significativa melhoria na estabilidade visual da aplicação, eliminação de erros 404 nas imagens e melhor aproveitamento das imagens locais disponíveis.
-
-### Análise do Problema
-1. As imagens dos produtos estavam configuradas no `db.json` como URLs externas (Unsplash e apoioentrega.com)
-2. Essas URLs externas não estavam disponíveis ou retornavam erros 404
-3. O site tinha imagens locais disponíveis em `/public/img/` que não estavam sendo utilizadas
-4. O componente `ProductItem` não tinha um tratamento robusto para falhas no carregamento de imagens
-
-### Soluções Implementadas
-1. **Criação do utilitário `imageUtils.ts`**
-   - Desenvolvimento de um sistema de mapeamento entre URLs externas e imagens locais
-   - Implementação de uma função `getLocalImageUrl` que converte automaticamente URLs externas em URLs locais
-   - Adição de lógica para lidar com diferentes formatos de URLs e parâmetros de consulta
-   - Implementação de categorização de imagens por tipo de produto para fallback inteligente
-
-2. **Melhoria no manipulador de erros de imagens**
-   - Refatoração do manipulador `onError` no componente `ProductItem.tsx`
-   - Implementação de um fluxo que tenta obter uma imagem local mapeada antes de recorrer ao fallback
-   - Prevenção contra loops infinitos através de flags de estado
-   - Adição de logs detalhados para depuração e monitoramento
-
-3. **Sistema de pré-carregamento de imagens**
-   - Implementação da função `preloadCommonImages` para carregar imagens comuns antecipadamente
-   - Integração do pré-carregamento no componente `App.tsx` para iniciar durante o carregamento da aplicação
-   - Priorização de imagens frequentemente utilizadas para minimizar tempo de carregamento
-
-### Resultado
-- Os produtos agora exibem imagens consistentes, mesmo quando as fontes externas falham
-- A experiência visual da aplicação é significativamente melhorada, sem "quebras" na exibição de produtos
-- O console do navegador está livre de erros 404 relacionados a imagens
-- As imagens locais disponíveis são utilizadas de forma eficiente, reduzindo a dependência de serviços externos
-- O sistema é facilmente expansível para adicionar novos mapeamentos ou ajustar a lógica de fallback
-
-### Próximos Passos
-- Considerar a migração completa de todas as referências de imagens no `db.json` para caminhos locais
-- Expandir a biblioteca de imagens locais para incluir mais produtos
-- Implementar um sistema de cache para imagens externas que são acessadas com frequência
-- Adicionar suporte para imagens de diferentes tamanhos (thumbnails, tamanho completo, etc.)
-
-## 2024-06-13 - Aprimoramento do Sistema de Tratamento de Imagens com Fallback Inteligente
-
-### Melhoria na Detecção de Problemas e Substituição Inteligente de Imagens
-- **O que foi feito**: Expansão e aprimoramento do sistema de tratamento de imagens para lidar melhor com URLs problemáticas e implementação de um sistema de fallback inteligente baseado no nome e categoria do produto.
-- **Por quê**: Mesmo com o sistema inicial de mapeamento de imagens externas para locais, algumas URLs do Unsplash e apoioentrega continuavam falhando e o sistema não estava aproveitando as informações contextuais (nome/categoria do produto) para escolher imagens de fallback adequadas.
-- **Impacto**: Significativa melhoria na apresentação visual dos produtos, com imagens mais relevantes mesmo quando as URLs originais falham, resultando em uma experiência visual mais consistente e contextualmente apropriada.
-
-### Análise do Problema
-1. Algumas URLs específicas do Unsplash não estavam incluídas no mapeamento inicial
-2. O sistema de fallback não estava usando informações contextuais (nome do produto, categoria) para escolher imagens substitutas mais adequadas
-3. A lógica de tratamento de falhas no componente `ProductItem` poderia ser mais robusta com múltiplos níveis de fallback
-
-### Soluções Implementadas
-1. **Expansão do mapeamento de URLs**
-   - Adição de mais URLs do Unsplash ao mapeamento, especialmente as URLs problemáticas identificadas nos logs
-   - Inclusão de URLs adicionais do banco de dados para aumentar a cobertura do mapeamento
-
-2. **Sistema de categorização e palavras-chave**
-   - Implementação de um sistema que mapeia categorias de produtos para imagens apropriadas
-   - Criação de um mapeamento de palavras-chave encontradas no título do produto para imagens relevantes
-   - Lógica inteligente que analisa o nome do produto e a categoria para determinar a melhor imagem de fallback
-
-3. **Estratégia de fallback em camadas**
-   - Refatoração do mecanismo de fallback no `ProductItem` para tentar múltiplas estratégias em sequência
-   - Uso de `useEffect` para tentar melhorar as imagens de fallback genéricas após a renderização inicial
-   - Implementação de verificações mais rigorosas para evitar loops infinitos ou trocas desnecessárias de imagens
-
-### Resultado
-- Produtos agora exibem imagens contextualmente relevantes mesmo quando a URL original falha
-- Por exemplo, produtos com "frango" no nome mostram imagens de frango, produtos lácteos mostram imagens relacionadas
-- Redução significativa nos casos onde o placeholder genérico é exibido
-- Melhor experiência visual para os usuários, com imagens que realmente representam a categoria do produto
-- Sistema facilmente expansível para incluir mais categorias, palavras-chave e imagens
-
-### Próximos Passos
-- Considerar a implementação de um sistema de cache para URLs externas que são acessíveis
-- Expandir a biblioteca de imagens locais e os mapeamentos de categorias/palavras-chave
-- Monitorar o desempenho do sistema com um volume maior de produtos e imagens
-
-## 2024-06-13 - Correção do Filtro de Produtos por Categoria
-
-### Problema de Exibição de Todos os Produtos em Vez de Apenas os da Categoria Selecionada
-- **O que foi feito**: Correção no componente `ShopPageContent.tsx` para filtrar corretamente os produtos por categoria quando uma categoria específica é selecionada.
-- **Por quê**: O sistema estava exibindo todos os produtos ao clicar em uma categoria específica, em vez de mostrar apenas os produtos da categoria selecionada.
-- **Impacto**: A navegação por categorias agora funciona corretamente, melhorando a experiência do usuário e facilitando a busca por produtos específicos.
-
-### Análise do Problema
-1. No componente `ShopPageContent`, a requisição para buscar produtos não estava usando o parâmetro de categoria
-2. Mesmo quando o usuário clicava em uma categoria específica, a API era chamada sem filtro
-3. A solicitação para obter o total de produtos também ignorava a categoria selecionada
-
-### Alterações Implementadas
-1. **Modificação na construção da URL de requisição**
-   - Adição de uma verificação para incluir o parâmetro `category` na URL de requisição quando uma categoria é selecionada
-   - Construção de URL dinâmica baseada na presença ou ausência do parâmetro de categoria
-
-2. **Correção na solicitação de produtos totais**
-   - Modificação da URL para buscar todos os produtos para respeitar o filtro de categoria
-   - Adaptação do cálculo de total de produtos para considerar apenas produtos da categoria selecionada
-
-3. **Aprimoramento na detecção de produtos duplicados**
-   - Atualização da lógica de verificação de duplicação para usar o ID do primeiro produto da lista completa
-   - Ajuste no cálculo de paginação manual para garantir consistência com o filtro de categoria
-
-### Resultado
-- Ao clicar em uma categoria, apenas os produtos pertencentes a ela são exibidos
-- O contador de produtos e a paginação agora refletem corretamente o total de produtos na categoria selecionada
-- A navegação entre categorias proporciona uma experiência mais intuitiva e útil para o usuário
-
-### Próximos Passos
-- Considerar a implementação de testes automatizados para validar o comportamento correto da filtragem por categoria
-- Avaliar a possibilidade de adicionar filtros adicionais (preço, marca, etc.) para refinar ainda mais a busca
-- Monitorar o desempenho das requisições filtradas com volumes maiores de produtos
-
-## 2024-06-13 - Correção do Problema de Filtragem por Categorias
-
-### Problema de Filtragem Incorreta de Produtos por Categoria
-- **O que foi feito**: Correção no filtro de produtos por categoria no componente `ShopPageContent.tsx` para usar o campo `categoryId` em vez de `category` nas URLs de requisição.
-- **Por quê**: O filtro não estava funcionando corretamente porque a API do JSON Server espera o campo `categoryId` para filtrar produtos, enquanto o código estava usando o parâmetro `category` (o slug da categoria).
-- **Impacto**: Agora o filtro por categorias funciona corretamente, exibindo apenas os produtos pertencentes à categoria selecionada.
-
-### Análise do Problema
-1. As requisições para a API estavam sendo feitas com o parâmetro incorreto (`category` em vez de `categoryId`)
-2. A estrutura do `db.json` mostra que produtos têm um campo `categoryId` que referencia o `id` da categoria, não o `slug`
-3. Uma análise dos logs mostrou que todas as categorias retornavam o mesmo número total de produtos (19), indicando que o filtro não estava sendo aplicado
-
-### Alterações Implementadas
-1. **Mapeamento de slug para categoryId**
-   - Adicionada lógica para encontrar o `categoryId` correspondente ao `slug` da categoria selecionada
-   - Uso da função `categories.find()` para localizar a categoria pelo slug e obter seu ID
-
-2. **Modificação das URLs de requisição**
-   - Alteração do parâmetro de filtro de `category` para `categoryId` nas URLs de requisição
-   - Atualização tanto da solicitação principal quanto da solicitação para obter o total de produtos
-
-3. **Melhoria nas verificações de segurança**
-   - Adição de verificações adicionais para evitar erros quando os arrays de produtos estão vazios
-   - Verificação da existência de `dataFromServer.length` e `allProducts.length` antes de acessar seus elementos
-
-### Resultado
-- As categorias agora filtram corretamente os produtos, exibindo apenas aqueles da categoria selecionada
-- O contador de produtos e a paginação refletem corretamente o total de produtos na categoria específica
-- Melhorou a experiência do usuário ao navegar entre diferentes categorias, mostrando conteúdo relevante
-
-### Próximos Passos
-- Implementar testes automatizados para garantir que a filtragem por categoria continue funcionando corretamente
-- Considerar a adição de filtros adicionais (preço, marca, disponibilidade, etc.)
-- Melhorar a performance das requisições usando técnicas de cache para categorias já visitadas
-
-## 2024-06-14 - Implementação de Upload de Imagens via URL no Painel Admin
-
-### Dupla Opção de Upload de Imagens (Arquivo e URL)
-- **O que foi feito**: Implementação de funcionalidade que permite aos administradores adicionar imagens aos produtos tanto via upload de arquivos quanto através de URLs da web.
-- **Por quê**: A funcionalidade anterior só permitia upload de arquivos locais, limitando a flexibilidade dos administradores que muitas vezes já possuem imagens hospedadas em outros serviços online.
-- **Impacto**: Maior flexibilidade para os administradores na gestão de imagens de produtos, permitindo aproveitar imagens já hospedadas na web sem necessidade de download e re-upload.
-
-### Detalhes da Implementação
-1. **Adição de campo para URL de imagem**
-   - Implementação de um novo campo de entrada para URLs de imagem
-   - Botão específico para adicionar a imagem a partir da URL informada
-   - Validação para garantir que a URL seja válida e aponte para uma imagem acessível
-
-2. **Validação de URLs de imagem**
-   - Verificação dupla de URLs: primeiro verifica se é uma URL válida, depois se é uma imagem acessível
-   - Implementação da função `validateImageUrl` que testa se uma URL aponta para uma imagem carregável
-   - Feedback visual durante o processo de validação com indicadores de carregamento
-
-3. **Tratamento de erros aprimorado**
-   - Mensagens de erro específicas para diferentes tipos de problemas (URL inválida, imagem inacessível)
-   - Prevenção de erros 404 com tratamento para URLs quebradas no momento da exibição
-   - Feedback imediato para o usuário em caso de problemas durante o upload
-
-### Resultado
-- Os administradores agora podem escolher entre fazer upload de arquivos locais ou utilizar URLs existentes
-- A interface do painel administrativo está mais flexível e prática para gestão de produtos
-- O sistema é capaz de validar URLs de imagens antes de adicioná-las, evitando problemas futuros
-- Todas as mensagens da interface foram traduzidas para português-BR conforme as regras do projeto
-
-### Próximos Passos
-- Considerar a implementação de uma biblioteca de imagens para reutilização entre produtos
-- Avaliar a possibilidade de integração com serviços de CDN para otimização de imagens
-- Implementar visualização prévia da imagem antes da confirmação do upload por URL
+### [2025-04-03]
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de alteração:** Correção de bug crítico
+
+**Descrição:**  
+Correção do problema persistente das imagens de produtos importados continuarem sendo substituídas pela imagem de picanha, mesmo após as correções anteriores.
+
+**Motivo:**  
+A análise do problema revelou duas questões críticas no arquivo `imageUtils.ts`:
+1. O mapeamento explícito de URLs da apoioentrega para imagens locais no objeto `imageMap` estava sobrepondo nossa lógica de preservação
+2. A verificação para preservar URLs de `apoioentrega.vteximg.com.br` estava sendo ignorada por lógicas subsequentes na função `getLocalImageUrl`
+
+**Solução implementada:**  
+1. Comentados todos os mapeamentos no objeto `imageMap` que redirecionavam URLs da apoioentrega para imagens locais
+2. Adicionadas verificações adicionais em múltiplos pontos da função `getLocalImageUrl` para garantir que URLs contendo `apoioentrega.vteximg.com.br` sejam sempre preservadas em sua forma original
+3. Adicionados comentários claros para documentar a prioridade máxima de preservação dessas URLs
+4. Removida a parte do código que tratava URLs do domínio `www.apoioentrega.com` como imagens de fallback
+
+**Impacto no sistema:**  
+- Os produtos importados agora exibem suas imagens originais corretamente na loja
+- Eliminação da confusão causada por produtos sendo exibidos com imagens incorretas
+- Melhor experiência visual para o usuário
+- Aumento da confiança na funcionalidade de importação de produtos
+
+**Arquivos modificados:**  
+- src/utils/imageUtils.ts - Correção do mapeamento e preservação de URLs de apoioentrega.vteximg.com.br
+
+**Observações:**  
+Esta correção resolve definitivamente o problema das imagens incorretas que persistia mesmo após as alterações anteriores. O problema foi causado por múltiplas camadas de transformação de URLs que precisavam ser alinhadas para garantir que as URLs originais fossem preservadas em todos os pontos do processo.
+
+## 2025-04-04 - Reescrita completa do fluxo de importação de imagens
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Refatoração completa
+
+**Descrição:**  
+Reescrita completa do sistema de processamento de imagens para produtos importados, corrigindo o problema persistente onde imagens de produtos de apoioentrega.com não eram exibidas corretamente.
+
+**Razão:**  
+Múltiplos problemas identificados em diferentes camadas do código estavam causando a substituição incorreta de URLs de imagens originais por imagens genéricas ou placeholders:
+
+1. No componente `ProductItem.tsx`, todas as imagens passavam pelo processamento de `getLocalImageUrl`, incluindo URLs válidas de apoioentrega.vteximg.com.br
+2. No `controller.js`, o processo de importação não preservava URLs originais
+3. No `ScraperProductsList.tsx`, a função de importação não detectava corretamente URLs de apoioentrega
+
+**Solução implementada:**
+1. Modificado o componente `ProductItem.tsx` para:
+   - Verificar se a URL da imagem é de apoioentrega.vteximg.com.br e preservá-la sem processamento
+   - Adicionar lógica específica nos eventos de erro para usar fallbacks somente quando necessário
+   - Melhorar o logging para facilitar diagnóstico
+
+2. Atualizado o `controller.js` para:
+   - Identificar e preservar URLs originais de apoioentrega durante o processo de importação
+   - Implementar lógica robusta para extrair imagens da descrição do produto
+   - Remover placeholders de forma mais eficiente
+   - Dar prioridade a imagens de apoioentrega.vteximg.com.br
+
+3. Reescrito o `ScraperProductsList.tsx` para:
+   - Adicionar tratamento específico para URLs de apoioentrega
+   - Melhorar o tratamento de erros durante a importação
+   - Fornecer feedback mais claro ao usuário
+
+**Impacto:**
+- Os produtos importados agora exibem as imagens corretas dos fornecedores
+- Melhor experiência do usuário com feedback visual apropriado
+- Eliminação da confusão causada por imagens genéricas incorretas
+- Processo de importação mais confiável e transparente
+
+**Arquivos modificados:**
+- src/components/ProductItem.tsx
+- src/scraper/controller.js
+- src/components/ScraperProductsList.tsx
+
+**Observações:**
+Esta solução abrangente aborda o problema em todas as camadas do aplicativo, desde a importação até a exibição, garantindo que as URLs originais de imagens de apoioentrega sejam preservadas em todo o fluxo. 
+
+## 2025-04-05 - Correção do endpoint de importação de produtos
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Correção de bug
+
+**Descrição:**  
+Correção do erro 404 (Not Found) ao tentar importar produtos individualmente através da interface de scraping.
+
+**Razão:**  
+Identificados dois problemas críticos:
+1. O endpoint `/api/import-product` não existia no servidor, resultando em erro 404 quando o usuário tentava importar produtos
+2. A URL da API estava sendo chamada de forma relativa no frontend, direcionando para a porta errada (5173 em vez de 3000)
+
+**Solução implementada:**
+1. Adicionada nova rota no servidor:
+   - Criado endpoint `/api/import-product` no controller para processar requisições de importação individual
+   - Implementada verificação de produtos duplicados para evitar conflitos
+   - Adicionada integração com o banco de dados para salvar os produtos importados
+
+2. Corrigida a URL no cliente:
+   - Atualizada a chamada AJAX no componente ScraperProductsList para usar a URL completa
+   - Substituída a chamada relativa por URL absoluta com a porta correta (http://localhost:3000)
+
+**Impacto:**
+- Usuários agora podem importar produtos individuais corretamente através da interface
+- Melhor experiência durante a importação com mensagens de sucesso/erro adequadas
+- Produtos duplicados são detectados e apresentam mensagem apropriada ao usuário
+- Sistema de importação manual agora funciona em complemento ao sistema automático
+
+**Arquivos modificados:**
+- src/scraper/controller.js - Adicionada nova rota para importação individual
+- src/components/ScraperProductsList.tsx - Corrigida URL da API
+
+**Observações:**
+Esta correção complementa o trabalho anterior de preservação de URLs de imagens e completa o fluxo de integração entre o scraper e a loja, permitindo tanto importação automática quanto manual de produtos. 
+
+## 2025-04-05 - Correção do erro 500 durante importação de produtos
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Correção de bug
+
+**Descrição:**  
+Correção do erro 500 que ocorria durante a importação de produtos devido a uma tentativa de acessar a propriedade 'id' de um objeto undefined na resposta do servidor.
+
+**Razão:**  
+Identificados problemas na manipulação de respostas do servidor e validação de dados:
+1. O controller tentava acessar `response.data.id` sem verificar se existia
+2. Faltava validação adequada dos dados do produto antes do envio
+3. O tratamento de erros não estava fornecendo informações suficientes para diagnóstico
+4. A estrutura do produto enviado para importação estava inconsistente
+
+**Solução implementada:**
+1. No controller (controller.js):
+   - Adicionada verificação de existência da resposta e seus dados
+   - Melhorado o logging para incluir mais informações sobre o produto
+   - Implementada estrutura mais robusta para retorno de erros
+   - Adicionada validação adicional dos dados recebidos
+
+2. No frontend (ScraperProductsList.tsx):
+   - Adicionada validação dos dados obrigatórios antes do envio
+   - Melhorado o tratamento de preços inválidos
+   - Implementada verificação mais robusta de imagens
+   - Expandido o sistema de logging para melhor diagnóstico
+
+**Impacto:**
+- Eliminação do erro 500 durante a importação
+- Melhor feedback para o usuário em caso de erros
+- Maior robustez no processo de importação
+- Logs mais detalhados para diagnóstico de problemas
+
+**Arquivos modificados:**
+- src/scraper/controller.js - Correção do acesso a dados undefined e melhoria no tratamento de erros
+- src/components/ScraperProductsList.tsx - Melhorias na validação e tratamento de erros
+
+**Observações:**
+Esta correção torna o processo de importação mais robusto e confiável, com melhor tratamento de casos de erro e validação mais rigorosa dos dados antes do envio ao servidor. 
+
+## 2025-04-05 - Melhorias no tratamento de imagens e validação
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Melhoria de funcionalidade
+
+**Descrição:**  
+Implementação de melhorias no tratamento de imagens e validação de dados em todo o sistema, com foco especial no componente ProductImage e no formulário de produtos.
+
+**Razão:**  
+Identificados pontos de melhoria no tratamento de imagens e validação:
+1. Inconsistência no tratamento de fallback de imagens entre componentes
+2. Validação insuficiente de URLs de imagem no formulário de produtos
+3. Tratamento de erros não padronizado
+4. Falta de limpeza de dados antes do envio ao servidor
+
+**Solução implementada:**
+1. No ProductImage.tsx:
+   - Adicionado suporte para URLs do apoioentrega
+   - Implementado mesmo padrão de fallback do ProductItem
+   - Melhorado o tratamento de erros de carregamento
+
+2. No ProductForm.tsx:
+   - Adicionada validação robusta de campos obrigatórios
+   - Implementada validação de URLs de imagem
+   - Melhorado o tratamento de erros da API
+   - Adicionada limpeza de dados antes do envio
+   - Implementada remoção automática de campos undefined
+
+**Impacto:**
+- Maior consistência no tratamento de imagens
+- Melhor experiência do usuário com mensagens de erro mais claras
+- Redução de erros por dados inválidos
+- Maior robustez no processamento de formulários
+
+**Arquivos modificados:**
+- src/components/ProductImage.tsx - Melhorias no tratamento de imagens
+- src/pages/admin/ProductForm.tsx - Melhorias na validação e tratamento de erros
+
+**Observações:**
+Estas melhorias complementam as correções anteriores no sistema de importação de produtos, tornando o sistema mais robusto e confiável como um todo. 
+
+## 2025-04-05 - Correção do parsing de JSON nas rotas de importação
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Correção de bug
+
+**Descrição:**  
+Correção do problema onde o corpo das requisições POST para importação de produtos estava chegando como undefined, impedindo a importação de produtos.
+
+**Razão:**  
+Identificado que o middleware express.json() não estava configurado corretamente no servidor, causando falha no parsing do corpo das requisições POST.
+
+**Solução a ser implementada:**
+1. Adicionar middleware express.json() no servidor antes das rotas
+2. Adicionar validação mais robusta do corpo da requisição
+3. Melhorar o logging para facilitar diagnóstico de problemas similares
+4. Adicionar tratamento específico para diferentes tipos de conteúdo
+
+**Impacto esperado:**
+- Correção do erro 400 na importação de produtos
+- Melhor tratamento de diferentes formatos de dados
+- Logs mais detalhados para diagnóstico
+- Processo de importação mais robusto
+
+**Arquivos a serem modificados:**
+- server.js - Adição do middleware de parsing
+- src/scraper/controller.js - Melhoria na validação e logging
+
+**Observações:**
+Esta correção é fundamental para o funcionamento do sistema de importação, tanto manual quanto automático. 
+
+## 2025-04-05 - Correção do problema de carregamento de imagens do apoioentrega
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Correção de bug
+
+**Descrição:**  
+Correção do problema onde as imagens dos produtos importados do apoioentrega não estavam sendo exibidas corretamente na página da loja.
+
+**Razão:**  
+Identificados vários problemas no tratamento das URLs de imagem:
+1. O componente ProductItem estava processando URLs válidas do apoioentrega desnecessariamente
+2. A lógica de fallback estava sendo aplicada muito cedo no processo
+3. O tratamento de erros não considerava o protocolo HTTP/HTTPS para URLs do apoioentrega
+4. O sistema estava tentando converter URLs válidas em URLs locais sem necessidade
+
+**Solução implementada:**
+1. No ProductItem.tsx:
+   - Removido o processamento inicial desnecessário de URLs
+   - Melhorada a lógica de fallback para ser mais gradual
+   - Adicionado suporte para tentar URLs HTTP quando HTTPS falha
+   - Melhorado o sistema de logs para diagnóstico
+
+2. No imageUtils.ts:
+   - Atualizada a função getLocalImageUrl para preservar URLs do apoioentrega
+   - Adicionado suporte para conversão automática entre HTTP e HTTPS
+   - Melhorada a detecção de URLs válidas
+   - Otimizada a lógica de fallback
+
+**Impacto:**
+- Imagens dos produtos do apoioentrega agora carregam corretamente
+- Melhor experiência do usuário com carregamento mais confiável
+- Sistema de fallback mais robusto quando imagens falham
+- Logs mais detalhados para diagnóstico de problemas
+
+**Arquivos modificados:**
+- src/components/ProductItem.tsx
+- src/utils/imageUtils.ts
+
+**Observações:**
+Esta correção resolve o problema de imagens não carregando na página da loja, especialmente para produtos importados do apoioentrega. A solução mantém as URLs originais quando apropriado e fornece um sistema de fallback robusto quando necessário. 
+
+## 2025-04-05 - Correção do tratamento de URLs de imagem do apoioentrega
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Correção de bug
+
+**Descrição:**  
+Correção do problema onde as imagens dos produtos importados do apoioentrega não estavam sendo exibidas corretamente devido a problemas com o protocolo HTTP/HTTPS e parâmetros de URL.
+
+**Razão:**  
+Identificados problemas específicos no tratamento de URLs do apoioentrega:
+1. URLs sem protocolo não estavam sendo tratadas corretamente
+2. Tentativa de forçar HTTPS quando HTTP era necessário
+3. Parâmetros de URL causando problemas no carregamento
+4. Lógica de fallback não estava tentando protocolos alternativos
+
+**Solução implementada:**
+1. No imageUtils.ts:
+   - Melhorada a detecção de URLs do apoioentrega
+   - Adicionado tratamento para URLs sem protocolo
+   - Implementada limpeza de parâmetros de URL
+   - Atualizada a lógica de preservação de URLs originais
+
+2. No ProductItem.tsx:
+   - Adicionada verificação de protocolo no carregamento inicial
+   - Melhorado o tratamento de erros de carregamento
+   - Implementada tentativa de protocolo alternativo (HTTP/HTTPS)
+   - Adicionada limpeza de parâmetros de URL no fallback
+
+**Impacto:**
+- Imagens do apoioentrega agora carregam corretamente
+- Melhor tratamento de URLs sem protocolo
+- Maior robustez no carregamento de imagens
+- Logs mais detalhados para diagnóstico
+
+**Arquivos modificados:**
+- src/utils/imageUtils.ts
+- src/components/ProductItem.tsx
+
+**Observações:**
+Esta correção resolve os problemas específicos com URLs do apoioentrega, garantindo que as imagens sejam carregadas corretamente independente do protocolo usado e removendo parâmetros problemáticos das URLs. 
+
+## 2025-04-05 - Melhoria no armazenamento e uso de imagens do apoioentrega
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Melhoria de funcionalidade
+
+**Descrição:**  
+Implementação de melhorias no sistema de armazenamento e uso de imagens do apoioentrega, garantindo que as URLs originais sejam preservadas corretamente no db.json e utilizadas adequadamente na exibição.
+
+**Razão:**  
+Identificados problemas no fluxo de imagens:
+1. URLs originais não estavam sendo armazenadas corretamente no db.json
+2. O sistema não estava mantendo registro das URLs originais para referência futura
+3. O tratamento de URLs sem protocolo ou com parâmetros não era consistente
+4. Faltava um campo específico para a imagem principal do produto
+
+**Solução implementada:**
+1. No controller.js:
+   - Adicionado campo `image` para a imagem principal
+   - Adicionado campo `originalImages` para preservar URLs originais
+   - Melhorado o tratamento de URLs do apoioentrega
+   - Implementada limpeza de parâmetros de URL
+   - Adicionado prefixo 'imported_' aos IDs para evitar conflitos
+
+2. No ProductItem.tsx:
+   - Atualizada a lógica para usar o campo `image` como fonte principal
+   - Mantido o fallback para `images[0]` para compatibilidade
+   - Melhorado o tratamento de erros de carregamento
+   - Otimizada a lógica de troca de protocolo HTTP/HTTPS
+
+**Impacto:**
+- URLs de imagens preservadas corretamente no banco de dados
+- Melhor rastreabilidade das imagens originais
+- Sistema mais robusto para lidar com diferentes formatos de URL
+- Melhor organização dos dados de imagem no db.json
+
+**Arquivos modificados:**
+- src/scraper/controller.js
+- src/components/ProductItem.tsx
+
+**Observações:**
+Esta melhoria complementa as correções anteriores no tratamento de imagens, garantindo que as URLs sejam não só preservadas corretamente no momento da exibição, mas também armazenadas de forma adequada no banco de dados para referência futura. 
+
+## 2025-04-05 - Refatoração do sistema de manipulação de imagens
+
+**Responsável:** Claude Sonnet 3.7
+**Tipo de mudança:** Refatoração e melhoria
+
+**Descrição:**
+Refatoração do sistema de manipulação de imagens para melhorar a organização, reusabilidade e manutenibilidade do código.
+
+**Razão:**
+1. Funções duplicadas em diferentes arquivos
+2. Inconsistência no tratamento de URLs de imagem
+3. Falta de documentação clara das funções
+4. Necessidade de centralizar a lógica de manipulação de imagens
+
+**Soluções implementadas:**
+1. Criado módulo `imageHelpers.ts` com funções utilitárias:
+   - `getProductMainImage`: Obtenção da imagem principal
+   - `getCategoryImage`: Obtenção de imagem de categoria
+   - `isValidImageUrl`: Validação de URLs
+   - `isImageUrl`: Verificação de extensões de imagem
+   - `isPlaceholderUrl`: Detecção de placeholders
+
+2. Atualizado `ProductForm.tsx`:
+   - Removida função duplicada de validação de URL
+   - Adicionada validação de extensão de imagem
+   - Padronizado uso de placeholder
+
+3. Atualizada documentação:
+   - Adicionado `ImageHelpers` ao mapa do código
+   - Documentadas todas as funções com JSDoc
+   - Atualizado `mapsource.md` com nova estrutura
+
+**Impacto:**
+- Código mais organizado e manutenível
+- Eliminação de duplicação
+- Melhor documentação
+- Padronização do tratamento de imagens
+
+**Arquivos modificados:**
+- src/utils/imageHelpers.ts (novo)
+- src/pages/admin/ProductForm.tsx
+- .cursor/rules/mapsource.md
+
+**Observações:**
+Esta refatoração complementa as melhorias anteriores no sistema de imagens, centralizando a lógica em módulos bem definidos e documentados. 

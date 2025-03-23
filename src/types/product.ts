@@ -32,6 +32,7 @@ export interface Product {
   expiryDate?: Date;
   origin?: string;
   discount?: number;
+  source?: string;
 }
 
 export type ProductFormData = Omit<Product, 'id' | 'createdAt' | 'updatedAt'>; 

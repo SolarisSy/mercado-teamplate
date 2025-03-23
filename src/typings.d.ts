@@ -29,6 +29,7 @@ interface Product {
   expiryDate?: string;
   origin?: string;
   discount?: number;
+  source?: string; // Origem do produto (e.g., 'apoioentrega')
 }
 
 interface ProductInCart extends Product {

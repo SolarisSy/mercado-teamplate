@@ -20,3 +20,6 @@ export { default as ProductsList } from "./admin/ProductsList";
 export { default as ProductForm } from "./admin/ProductForm";
 export { default as ProductView } from "./admin/ProductView";
 export { default as CategoriesManager } from "./admin/CategoriesManager";
+export { default as CarouselManager } from "./admin/CarouselManager";
+export { default as TrackingManager } from "./admin/TrackingManager";
+export { default as ProductImporter } from "./admin/ProductImporter";

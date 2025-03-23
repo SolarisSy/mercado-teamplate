@@ -7,6 +7,7 @@ import { HiPlus, HiX } from 'react-icons/hi';
 import { Product, ProductImage } from '../../types/product';
 import { uploadImages, validateImageUrl } from '../../services/imageService';
 import { useCategories } from '../../context/CategoryContext';
+import { isValidImageUrl, isImageUrl, isPlaceholderUrl } from '../../utils/imageHelpers';
 
 const ProductForm = () => {
   const { id } = useParams();
@@ -197,53 +198,67 @@ const ProductForm = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    if (!title || !price || !category) {
-      toast.error('Please fill all required fields');
-      return;
-    }
-    
     setIsSubmitting(true);
     
     try {
-      // Process and upload images if any new ones are added
-      let uploadedImageUrls: string[] = [];
-      if (imageFiles.length > 0) {
-        uploadedImageUrls = await uploadImages(imageFiles);
+      // Validar campos obrigatórios
+      if (!title.trim()) {
+        toast.error('O título do produto é obrigatório');
+        return;
       }
       
-      // Combine existing images with newly uploaded ones
-      const allImages = [
-        ...images.filter(img => !img.url.startsWith('blob:')), // Keep existing remote images
-        ...uploadedImageUrls.map((url, i) => ({
-          id: nanoid(),
-          url,
-          isPrimary: images.length === 0 && i === 0 // Set as primary if it's the first image
-        }))
-      ];
+      if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+        toast.error('O preço deve ser um número válido maior que zero');
+        return;
+      }
       
-      // Make sure there's a primary image
-      if (allImages.length > 0 && !allImages.some(img => img.isPrimary)) {
-        allImages[0].isPrimary = true;
+      if (!category.trim()) {
+        toast.error('A categoria é obrigatória');
+        return;
+      }
+      
+      // Validar imagens
+      if (images.length === 0) {
+        toast.error('É necessário pelo menos uma imagem para o produto');
+        return;
+      }
+      
+      // Verificar se há uma imagem primária definida
+      const hasPrimaryImage = images.some(img => img.isPrimary);
+      if (!hasPrimaryImage) {
+        // Se não houver imagem primária, definir a primeira como primária
+        const updatedImages = [...images];
+        updatedImages[0].isPrimary = true;
+        setImages(updatedImages);
+      }
+      
+      // Validar URLs das imagens
+      const invalidImages = images.filter(img => !img.url || !isValidImageUrl(img.url) || !isImageUrl(img.url));
+      if (invalidImages.length > 0) {
+        toast.error('Uma ou mais URLs de imagem são inválidas');
+        return;
       }
       
       // Build the product object
       const productData = {
-        title,
-        description,
-        category,
+        title: title.trim(),
+        description: description.trim(),
+        category: category.trim(),
         price: parseFloat(price),
-        stock: parseInt(stock, 10),
-        popularity: parseInt(popularity, 10),
+        stock: parseInt(stock, 10) || 0,
+        popularity: parseInt(popularity, 10) || 0,
         featured,
-        image: allImages.find(img => img.isPrimary)?.url || (allImages[0]?.url || ''),
-        images: allImages.length > 0 ? allImages : undefined,
+        image: images.find(img => img.isPrimary)?.url || images[0].url,
+        images: images.map(img => ({
+          url: img.url,
+          isPrimary: img.isPrimary
+        })),
         weight: weight ? parseFloat(weight) : undefined,
-        unit,
-        brand: brand || undefined,
+        unit: unit.trim(),
+        brand: brand.trim() || undefined,
         isOrganic,
         expiryDate: expiryDate || undefined,
-        origin: origin || undefined,
+        origin: origin.trim() || undefined,
         discount: discount ? parseFloat(discount) : undefined,
         nutritionalInfo: {
           calories: calories ? parseFloat(calories) : undefined,
@@ -254,18 +269,58 @@ const ProductForm = () => {
         }
       };
       
+      // Remover campos undefined
+      Object.keys(productData).forEach(key => {
+        if (productData[key] === undefined) {
+          delete productData[key];
+        }
+      });
+      
+      if (productData.nutritionalInfo) {
+        Object.keys(productData.nutritionalInfo).forEach(key => {
+          if (productData.nutritionalInfo[key] === undefined) {
+            delete productData.nutritionalInfo[key];
+          }
+        });
+        
+        // Se não houver informações nutricionais, remover o objeto
+        if (Object.keys(productData.nutritionalInfo).length === 0) {
+          delete productData.nutritionalInfo;
+        }
+      }
+      
+      let response;
       if (isEditMode) {
-        await customFetch.put(`/products/${id}`, productData);
-        toast.success('Produto atualizado com sucesso');
+        response = await customFetch.put(`/products/${id}`, productData);
+        if (response.status === 200) {
+          toast.success('Produto atualizado com sucesso');
+        } else {
+          throw new Error('Falha ao atualizar produto');
+        }
       } else {
-        await customFetch.post('/products', productData);
-        toast.success('Produto criado com sucesso');
+        response = await customFetch.post('/products', productData);
+        if (response.status === 201) {
+          toast.success('Produto criado com sucesso');
+        } else {
+          throw new Error('Falha ao criar produto');
+        }
       }
       
       navigate('/admin/products');
     } catch (error) {
-      toast.error(isEditMode ? 'Falha ao atualizar produto' : 'Falha ao criar produto');
-      console.error('Error:', error);
+      console.error('Erro ao salvar produto:', error);
+      
+      if (error.response) {
+        // Erro da API
+        const message = error.response.data?.message || 'Erro desconhecido do servidor';
+        toast.error(`Falha ao ${isEditMode ? 'atualizar' : 'criar'} produto: ${message}`);
+      } else if (error.request) {
+        // Erro de rede
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      } else {
+        // Outros erros
+        toast.error(error.message || 'Erro desconhecido ao processar sua requisição');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -620,7 +675,7 @@ const ProductForm = () => {
                     className="w-full h-40 object-cover"
                     onError={(e) => {
                       // Tratamento para imagens quebradas
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=Imagem+Indisponível';
+                      (e.target as HTMLImageElement).src = '/img/placeholder-product.jpg';
                     }}
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">

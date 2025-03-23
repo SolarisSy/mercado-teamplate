@@ -23,6 +23,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // Para este exemplo, usaremos credenciais fixas
     if (username === 'admin' && password === 'admin123') {
       localStorage.setItem('adminToken', 'admin-token-example');
+      localStorage.setItem('userRole', 'admin'); // Define a role do usuário
       setIsAdminAuthenticated(true);
       return true;
     }
@@ -31,6 +32,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const adminLogout = () => {
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('userRole'); // Remove a role do usuário
     setIsAdminAuthenticated(false);
   };
 

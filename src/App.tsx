@@ -32,6 +32,7 @@ import ProductView from "./pages/admin/ProductView";
 import CategoriesManager from "./pages/admin/CategoriesManager";
 import CarouselManager from "./pages/admin/CarouselManager";
 import TrackingManager from "./pages/admin/TrackingManager";
+import ProductImporter from "./pages/admin/ProductImporter";
 import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from 'react-hot-toast';
 import { useEffect } from "react";
@@ -165,6 +166,10 @@ const router = createBrowserRouter([
       {
         path: "tracking",
         element: <TrackingManager />,
+      },
+      {
+        path: "importer",
+        element: <ProductImporter />,
       },
     ],
   },

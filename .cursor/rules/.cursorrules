@@ -1,13 +1,32 @@
-0. always respond and document in portuguese-br
+Include the following instructions at the start of each new request in Cursor (using the Claude Sonnet 3.7 model) to guide the AI. This prompt ensures the AI thoroughly understands the task, avoids errors, plans before coding, and maintains clear documentation:
 
-1. **Read** the content of `objective.md` to fully understand the current task’s goal, requirements, and context **before** writing any code. Always ground your solution in the objective described there.  
+1. **Read** the content of `objective.md` in .cursor\rules\objective.md to fully understand the current task’s goal, requirements, and context **before** writing any code. Always ground your solution in the objective described there.  
+   > 💡 **If this is a new request**, **erase the previous content in `objective.md` and write the new objective**, clearly describing the task, its scope, and acceptance criteria.
+ 
 2. **Plan** your approach **before execution**. Break the task down into clear, logical subtasks or steps (use a MECE approach – *Mutually Exclusive, Collectively Exhaustive*) to cover all aspects of the problem without overlap. Outline this plan to ensure you have a structured strategy.  
-3. **Follow** all operational rules defined in **`.cursorrules`** *at all times*. Adhere strictly to these guidelines – they represent project conventions, coding standards, and safety requirements. (For example: maintain type safety, handle errors properly, preserve existing functionality, and document new code as required.)  
+
+3. **Follow** all operational rules defined in **`.cursor\rules\.cursorrules`** *at all times*. Adhere strictly to these guidelines – they represent project conventions, coding standards, and safety requirements. (For example: maintain type safety, handle errors properly, preserve existing functionality, and document new code as required.)  
+
 4. **Write** code carefully and correctly to **avoid bugs, errors, duplications, or infinite loops**. Implement solutions step-by-step, double-checking logic to prevent mistakes. Reuse existing code or components when possible instead of duplicating functionality, ensuring new code integrates seamlessly with the codebase.  
+
 5. **Apply** best practices of the project’s tech stack (Node.js, NestJS, React, etc.) during implementation. Use idiomatic patterns and conventions for each framework or language (e.g. proper module/controller structure in NestJS, async handling in Node.js, functional components and hooks in React) so that your code is clean, maintainable, and aligned with the team’s standards.  
-6. **Refer** to `mapsource.md` whenever you encounter unfamiliar code or start working on a new area of the codebase. Use this file as a **map of the project’s structure** and existing functionalities. If the section of code you are handling is not documented in `mapsource.md`, **update** it: add or modify entries to clearly document new functions, classes, modules, and their purpose/relationships, so this file remains an up-to-date index of the codebase.  
-7. **Update** `memorie.md` after each significant code change or task completion. Record **what** was changed or implemented, **why** you made those changes (the reasoning or motivation), and **what impact** it has on the project (effects, improvements, or any side-effects). Maintain this running log throughout the development process to create a clear history of decisions and modifications.  
+
+6. **Refer** to `mapsource.md` in .cursor\rules\mapsource.md whenever you encounter unfamiliar code or start working on a new area of the codebase. Use this file as a **map of the project’s structure** and existing functionalities.  
+   > 🧭 **If the section of code you are working on is not documented in `mapsource.md`, you must immediately update it.**  
+   Add or modify entries to document:
+   - The function/module/component name
+   - Its file path and purpose
+   - Its key relationships (dependencies, usage, hierarchy)
+   - Status (New / Updated / Removed)  
+   This ensures `mapsource.md` stays **fully up to date** and reflects the live structure of the codebase.
+
+7. **Update** `memorie.md` in .cursor\rules\memorie.md after each significant code change or task completion. Record **what** was changed or implemented, **why** you made those changes (the reasoning or motivation), and **what impact** it has on the project (effects, improvements, or any side-effects). Maintain this running log throughout the development process to create a clear history of decisions and modifications.  
+   > 🗂️ Ensure `memorie.md` remains consistently accurate and comprehensive at each step.
+
 8. **Verify** the logic and behavior of the code at each step. After implementing a change, test it (mentally or with actual test cases) against various scenarios, including edge cases, to ensure it works as intended and doesn’t introduce regressions or new errors. If any issues are detected, fix them immediately before moving on.  
+
 9. **Document** your work thoroughly. In the code, include clear comments or docstrings for new functions, classes, or complex logic, explaining their behavior and usage. Keep the code and documentation well-organized so that other developers (or future you) can easily understand the changes. Additionally, ensure `mapsource.md` and `memorie.md` entries are clear and informative as part of this documentation effort.  
+
 10. **Work** in an iterative, controlled manner. Tackle one subtask at a time from your plan, complete it, and confirm it’s correct (and doesn’t break anything) before proceeding to the next. Avoid making large, sweeping changes all at once — incremental development makes it easier to isolate and fix issues, and keeps progress aligned with the plan.  
+
 11. **Maintain** a direct, technical, and results-oriented communication style. When you explain your plan, describe a code change, or summarize an update (either in documentation or in responses), be concise and to the point. Focus on the **what**, **why**, and **how** of your solution in a clear, professional tone. Always tie your explanations back to the objective, ensuring the discussion stays goal-oriented and efficient.

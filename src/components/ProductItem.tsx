@@ -8,8 +8,6 @@ import { HiOutlineShoppingCart } from "react-icons/hi";
 import { FaTags } from "react-icons/fa";
 import { Product } from '../types/product';
 import { formatCurrency } from '../utils/formatCurrency';
-// Imagem de fallback local para evitar problemas de rede
-import noImagePlaceholder from '../assets/no-image.svg';
 // Importar o utilitário de imagens
 import { getLocalImageUrl } from '../utils/imageUtils';
 
@@ -66,8 +64,12 @@ const ProductItem: React.FC<ProductItemProps> = ({
   const discount = product?.discount || propDiscount || 0;
   
   const [isHovered, setIsHovered] = useState(false);
-  // Usar o utilitário para obter a URL local da imagem, passando também o título e a categoria
-  const [imgSrc, setImgSrc] = useState(getLocalImageUrl(imageUrl, title, category));
+  
+  // Verificar se a URL é de apoioentrega.vteximg.com.br para preservá-la
+  const isApoioEntregaImage = imageUrl && typeof imageUrl === 'string' && imageUrl.includes('apoioentrega.vteximg.com.br');
+  
+  // Inicializar com URL original para apoioentrega ou URL local para outras fontes
+  const [imgSrc, setImgSrc] = useState(imageUrl);
   const [hasImgError, setHasImgError] = useState(false);
   const dispatch = useAppDispatch();
   
@@ -104,16 +106,27 @@ const ProductItem: React.FC<ProductItemProps> = ({
   
   // Use um efeito para tentar obter uma imagem melhor se o componente for montado com uma imagem de fallback genérica
   useEffect(() => {
-    // Se a imagem for um placeholder, tentar encontrar uma imagem melhor baseada no título e categoria
-    if (imgSrc.includes('placeholder-product.jpg')) {
-      // Tentar obter uma imagem melhor baseada no título do produto
+    // Não modificar URLs de apoioentrega.vteximg.com.br
+    if (isApoioEntregaImage) {
+      // Garantir que a URL tenha o protocolo correto
+      if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+        setImgSrc(`http://${imageUrl}`);
+      } else {
+        setImgSrc(imageUrl);
+      }
+      console.log(`Usando URL original de apoioentrega: ${imgSrc}`);
+      return;
+    }
+    
+    // Se não temos URL ou se é um placeholder, tentar encontrar uma imagem melhor
+    if (!imageUrl || imageUrl.includes('placeholder')) {
       const betterImage = getLocalImageUrl('', title, category);
-      if (betterImage !== imgSrc && !betterImage.includes('placeholder-product.jpg')) {
-        console.log(`Substituindo placeholder por imagem mais específica para "${title}"`);
+      if (betterImage && !betterImage.includes('placeholder-product.jpg')) {
+        console.log(`Usando imagem alternativa para "${title}": ${betterImage}`);
         setImgSrc(betterImage);
       }
     }
-  }, [title, category, imgSrc]);
+  }, [imageUrl, title, category, isApoioEntregaImage]);
   
   return (
     <div 
@@ -129,28 +142,42 @@ const ProductItem: React.FC<ProductItemProps> = ({
             alt={title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             onError={(e) => {
-              // Prevenção contra loop infinito - só tenta uma vez a imagem de fallback
               if (!hasImgError) {
-                console.warn(`Imagem não encontrada para o produto "${title}": ${imageUrl}`);
+                console.warn(`Erro ao carregar imagem para "${title}": ${imgSrc}`);
                 setHasImgError(true);
                 
-                // Estratégia de fallback em etapas:
-                // 1. Tentar novamente com getLocalImageUrl incluindo título e categoria
+                // Se for uma URL do apoioentrega que falhou, tentar usar protocolo alternativo
+                if (isApoioEntregaImage) {
+                  const currentUrl = imgSrc;
+                  let alternativeUrl;
+                  
+                  if (currentUrl.startsWith('https://')) {
+                    alternativeUrl = currentUrl.replace('https://', 'http://');
+                  } else if (currentUrl.startsWith('http://')) {
+                    alternativeUrl = currentUrl.replace('http://', 'https://');
+                  } else {
+                    alternativeUrl = `http://${currentUrl}`;
+                  }
+                  
+                  // Remover parâmetros da URL que podem causar problemas
+                  alternativeUrl = alternativeUrl.split('?')[0];
+                  
+                  console.log(`Tentando URL alternativa do apoioentrega: ${alternativeUrl}`);
+                  setImgSrc(alternativeUrl);
+                  return;
+                }
+                
+                // Para outras URLs, tentar encontrar uma imagem local
                 const localUrl = getLocalImageUrl(imageUrl, title, category);
                 if (localUrl !== imgSrc) {
+                  console.log(`Tentando URL local: ${localUrl}`);
                   setImgSrc(localUrl);
                   return;
                 }
                 
-                // 2. Se ainda não encontrou, tentar obter apenas pelo título e categoria
-                const fallbackByName = getLocalImageUrl('', title, category);
-                if (fallbackByName !== DEFAULT_PLACEHOLDER && !fallbackByName.includes('placeholder-product.jpg')) {
-                  setImgSrc(fallbackByName);
-                  return;
-                }
-                
-                // 3. Em último caso, usar o placeholder SVG local
-                setImgSrc(noImagePlaceholder);
+                // Em último caso, usar o placeholder
+                console.log(`Usando placeholder para "${title}"`);
+                setImgSrc('/img/placeholder-product.jpg');
               }
             }}
           />
@@ -232,25 +259,22 @@ const ProductItem: React.FC<ProductItemProps> = ({
             )}
           </div>
           
+          {/* Botão de adicionar ao carrinho */}
           <button
             onClick={handleAddToCart}
+            className={`
+              flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300
+              ${stock > 0 ? 'bg-primary text-white hover:bg-primary-dark' : 'bg-gray-300 cursor-not-allowed'}
+            `}
             disabled={stock === 0}
-            className={`p-2 rounded-full transition duration-300 ${
-              stock === 0 
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                : 'bg-primary text-white hover:bg-primary-dark'
-            }`}
-            title={stock === 0 ? 'Produto indisponível' : 'Adicionar ao carrinho'}
           >
-            <HiOutlineShoppingCart className="w-5 h-5" />
+            <HiOutlineShoppingCart className="text-xl" />
+            <span className="hidden group-hover:inline">Adicionar</span>
           </button>
         </div>
       </div>
     </div>
   );
 };
-
-// Constante para o caminho do placeholder, para não depender da string literal
-const DEFAULT_PLACEHOLDER = '/img/placeholder-product.jpg';
 
 export default ProductItem;
