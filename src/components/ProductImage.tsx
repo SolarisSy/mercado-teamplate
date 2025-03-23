@@ -1,22 +1,26 @@
 import { useState } from 'react';
 
 interface ProductImageProps {
-  src: string;
+  src: string | undefined;
   alt: string;
   className?: string;
 }
 
 const ProductImage = ({ src, alt, className = '' }: ProductImageProps) => {
-  const [error, setError] = useState(false);
+  const [imgSrc, setImgSrc] = useState(src || '');
+  const [hasError, setHasError] = useState(false);
   
   const handleError = () => {
-    console.log(`Error loading product item image: ${src}`);
-    setError(true);
+    if (!hasError) {
+      console.warn(`Erro ao carregar imagem do produto: ${src}`);
+      setHasError(true);
+      setImgSrc('https://via.placeholder.com/300x200?text=Produto');
+    }
   };
   
   return (
     <img 
-      src={error ? '/placeholder-product.jpg' : src}
+      src={imgSrc}
       alt={alt}
       className={className}
       onError={handleError}

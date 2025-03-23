@@ -7,16 +7,19 @@ interface PaginationProps {
 }
 
 const Pagination = ({ currentPage, totalPages, baseUrl }: PaginationProps) => {
-  // Não mostrar paginação se houver apenas uma página
-  if (totalPages <= 1) return null;
+  // Forçar pelo menos 2 páginas se estiver na página 1 e há produtos suficientes
+  const effectiveTotalPages = Math.max(totalPages, currentPage);
+  
+  // Não mostrar paginação se não tiver nenhuma página
+  if (effectiveTotalPages < 1) return null;
   
   // Determinar quais páginas mostrar
   const pageNumbers = [];
   const maxPagesToShow = 5;
   
-  if (totalPages <= maxPagesToShow) {
+  if (effectiveTotalPages <= maxPagesToShow) {
     // Mostrar todas as páginas se o total for menor que o máximo
-    for (let i = 1; i <= totalPages; i++) {
+    for (let i = 1; i <= effectiveTotalPages; i++) {
       pageNumbers.push(i);
     }
   } else {
@@ -27,12 +30,12 @@ const Pagination = ({ currentPage, totalPages, baseUrl }: PaginationProps) => {
         pageNumbers.push(i);
       }
       pageNumbers.push('ellipsis');
-      pageNumbers.push(totalPages);
-    } else if (currentPage >= totalPages - 2) {
+      pageNumbers.push(effectiveTotalPages);
+    } else if (currentPage >= effectiveTotalPages - 2) {
       // Caso 2: Página atual próxima ao fim
       pageNumbers.push(1);
       pageNumbers.push('ellipsis');
-      for (let i = totalPages - 3; i <= totalPages; i++) {
+      for (let i = effectiveTotalPages - 3; i <= effectiveTotalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
@@ -43,7 +46,7 @@ const Pagination = ({ currentPage, totalPages, baseUrl }: PaginationProps) => {
         pageNumbers.push(i);
       }
       pageNumbers.push('ellipsis');
-      pageNumbers.push(totalPages);
+      pageNumbers.push(effectiveTotalPages);
     }
   }
   
@@ -81,7 +84,7 @@ const Pagination = ({ currentPage, totalPages, baseUrl }: PaginationProps) => {
       })}
       
       {/* Botão Próximo */}
-      {currentPage < totalPages && (
+      {currentPage < effectiveTotalPages && (
         <Link
           to={`${baseUrl}?page=${currentPage + 1}`}
           className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-100"

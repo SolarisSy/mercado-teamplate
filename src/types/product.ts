@@ -1,33 +1,37 @@
-export interface ProductSize {
-  name: string;
-  available: boolean;
-}
-
-export interface ProductColor {
-  name: string;
-  hex: string;
-  available: boolean;
-}
-
 export interface ProductImage {
   id: string;
   url: string;
   isPrimary: boolean;
 }
 
+export interface NutritionalInfo {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  sodium?: number;
+  sugar?: number;
+}
+
 export interface Product {
   id: string;
   title: string;
   description: string;
-  category: string;
   price: number;
-  images: ProductImage[];
-  image?: string;
-  sizes: ProductSize[];
-  colors: ProductColor[];
-  popularity: number;
+  category: string;
   stock: number;
-  featured: boolean;
-  createdAt: string;
-  updatedAt: string;
-} 
+  images?: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
+  weight?: number;
+  unit?: string;
+  brand?: string;
+  isOrganic?: boolean;
+  nutritionalInfo?: NutritionalInfo;
+  expiryDate?: Date;
+  origin?: string;
+  discount?: number;
+}
+
+export type ProductFormData = Omit<Product, 'id' | 'createdAt' | 'updatedAt'>; 

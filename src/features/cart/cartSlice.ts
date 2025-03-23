@@ -5,15 +5,16 @@ interface ProductInCart {
   id: string;
   title: string;
   price: number;
-  image: string;
+  image?: string;
   quantity: number;
-  size?: string;
-  color?: string;
-  description: string;
-  category: string;
-  popularity: number;
-  stock: number;
-  featured: boolean;
+  category?: string;
+  stock?: number;
+  // Campos específicos para supermercado
+  weight?: number;
+  unit?: string;
+  brand?: string;
+  isOrganic?: boolean;
+  discount?: number;
 }
 
 interface CartState {
@@ -30,7 +31,7 @@ const cartSlice = createSlice({
   name: "cart",
   initialState,
   reducers: {
-    addProductToTheCart: (state, action: PayloadAction<ProductInCart>) => {
+    addToCart: (state, action: PayloadAction<ProductInCart>) => {
       const product = action.payload;
       const existingProduct = state.cartItems.find(
         (item) => item.id === product.id
@@ -38,13 +39,20 @@ const cartSlice = createSlice({
 
       if (existingProduct) {
         existingProduct.quantity += product.quantity;
+        toast.success("Quantidade atualizada no carrinho");
       } else {
         state.cartItems.push(product);
+        toast.success("Produto adicionado ao carrinho");
       }
 
-      // Recalcular o valor total
+      // Recalcular o valor total considerando descontos
       state.totalAmount = state.cartItems.reduce(
-        (total, item) => total + item.price * item.quantity,
+        (total, item) => {
+          const price = item.discount 
+            ? item.price * (1 - (item.discount / 100)) 
+            : item.price;
+          return total + price * item.quantity;
+        },
         0
       );
     },
@@ -86,7 +94,7 @@ const cartSlice = createSlice({
 });
 
 export const {
-  addProductToTheCart,
+  addToCart,
   removeProductFromTheCart,
   updateProductQuantity,
   clearCart,

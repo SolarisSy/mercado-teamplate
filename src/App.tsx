@@ -34,6 +34,8 @@ import CarouselManager from "./pages/admin/CarouselManager";
 import TrackingManager from "./pages/admin/TrackingManager";
 import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from 'react-hot-toast';
+import { useEffect } from "react";
+import { preloadCommonImages } from "./utils/imageUtils";
 
 const router = createBrowserRouter([
   {
@@ -169,6 +171,11 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
+  useEffect(() => {
+    // Pré-carregar imagens comuns no início da aplicação
+    preloadCommonImages();
+  }, []);
+
   return (
     <AuthProvider>
       <AdminAuthProvider>

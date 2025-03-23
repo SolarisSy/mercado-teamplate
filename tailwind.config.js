@@ -12,6 +12,7 @@ export default {
         danger: "#e12428",
         warning: "#ffc107",
         info: "#102F70",
+        secondaryBrown: "#8B4513",
       },
     },
   },

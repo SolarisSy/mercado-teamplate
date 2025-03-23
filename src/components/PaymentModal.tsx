@@ -14,8 +14,10 @@ interface CartItem {
   quantity: number;
   image?: string;
   category?: string;
-  size?: string;
-  color?: string;
+  weight?: number;
+  unit?: string;
+  brand?: string;
+  isOrganic?: boolean;
 }
 
 interface PaymentModalProps {

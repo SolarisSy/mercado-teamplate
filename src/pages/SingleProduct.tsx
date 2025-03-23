@@ -6,7 +6,7 @@ import {
 } from "../components";
 import { useParams } from "react-router-dom";
 import React, { useEffect, useState } from "react";
-import { addProductToTheCart } from "../features/cart/cartSlice";
+import { addToCart } from "../features/cart/cartSlice";
 import { useAppDispatch } from "../hooks";
 import WithNumberInputWrapper from "../utils/withNumberInputWrapper";
 import { formatCategoryName } from "../utils/formatCategoryName";
@@ -55,7 +55,7 @@ const SingleProduct = () => {
   const handleAddToCart = () => {
     if (singleProduct) {
       dispatch(
-        addProductToTheCart({
+        addToCart({
           id: singleProduct.id,
           image: singleProduct.image,
           title: singleProduct.title,
@@ -99,7 +99,11 @@ const SingleProduct = () => {
                 alt={singleProduct.title}
                 className="w-full h-full object-cover rounded-lg"
                 onError={(e) => {
-                  e.currentTarget.src = '/placeholder-product.jpg';
+                  e.currentTarget.src = '/images/placeholder-product.jpg';
+                  e.currentTarget.onerror = () => {
+                    e.currentTarget.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABZ0RVh0Q3JlYXRpb24gVGltZQAwNi8yOS8xMw==';
+                    e.currentTarget.onerror = null;
+                  };
                 }}
               />
               {singleProduct.featured && (
@@ -124,7 +128,9 @@ const SingleProduct = () => {
                 </p>
                 
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-2xl font-bold text-green-700">{formatPrice(singleProduct.price)}</span>
+                  <span className="text-2xl font-bold text-green-700">
+                    {formatPrice(singleProduct.price)}
+                  </span>
                   {singleProduct.discount && singleProduct.discount > 0 && (
                     <span className="ml-3 text-sm text-gray-500 line-through">
                       {formatPrice(singleProduct.price * (1 + singleProduct.discount / 100))}
