@@ -8,27 +8,8 @@ const DEFAULT_PLACEHOLDER = "/img/placeholder-product.jpg";
 
 // Mapeamento de URLs externas para caminhos de imagem locais
 const imageMap: Record<string, string> = {
-  // URLs do Unsplash (apenas o início, vamos tratar os parâmetros depois)
-  "https://images.unsplash.com/photo-1586201375761-83865001e8ac": "/img/114739-picanha-tradicional-peca-1kg.jpg", // Arroz Branco
-  "https://images.unsplash.com/photo-1546069901-ba9599a7e63c": "/img/bife-ancho-friboi-maturatta-entrecote-1-7kg.jpg", // Legumes
-  "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce": "/img/file-mignon-bovino-sem-cordao-peca-1kg.jpg", // Frutas
-  "https://images.unsplash.com/photo-1591857177593-aec9cc4147e4": "/img/picanha-grill-fat-1kg.jpg", // Feijão
-  
-  // Adicionando as URLs que estão falhando nos logs
-  "https://images.unsplash.com/photo-1587132137056-bfbf0166836e": "/img/placeholder-product.jpg", // Banana Prata Orgânica
-  "https://images.unsplash.com/photo-1563636619-e9143da7973b": "/img/placeholder-product.jpg", // Leite Integral
-  
-  // Mais URLs comuns do Unsplash
-  "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f": "/img/file-mignon-bovino-sem-cordao-peca-1kg.jpg",
-  "https://images.unsplash.com/photo-1608198093002-ad4e005484ec": "/img/177634-salame-11g-de-proteina-original-sadia-salam.jpg",
-  "https://images.unsplash.com/photo-1551024709-8f23befc6f87": "/img/114739-picanha-tradicional-peca-1kg.jpg",
-  "https://images.unsplash.com/photo-1563453392212-326f5e854473": "/img/coracao-de-frango-bandeja-seara-1kg.jpg",
-  "https://images.unsplash.com/photo-1589033134270-25236a5be391": "/img/placeholder-product.jpg",
-  "https://images.unsplash.com/photo-1536304929831-ee1ca9d44906": "/img/placeholder-banner.jpg",
-  "https://images.unsplash.com/photo-1610348725531-843dff563e2c": "/img/placeholder-product.jpg",
-  "https://images.unsplash.com/photo-1573246123716-6b1782bfc499": "/img/placeholder-banner.jpg",
-  "https://images.unsplash.com/photo-1628689469838-524a4a973b8e": "/img/placeholder-product.jpg",
-  "https://images.unsplash.com/photo-1583608564372-3e5e46a9e05d": "/img/placeholder-product.jpg"
+  // Este mapeamento foi desabilitado para garantir que URLs originais sejam preservadas
+  // Mantido apenas para referência histórica
 };
 
 // Mapeamento de palavras-chave em produtos para imagens (usado quando a URL falha e não temos categoria)
@@ -114,16 +95,9 @@ export function getLocalImageUrl(url: string, productName?: string, category?: s
   
   // REGRA PRINCIPAL: PRESERVAR URLS DE APOIOENTREGA.VTEXIMG.COM.BR
   if (isApoioEntregaImageUrl(url)) {
-    // Tentar usar HTTP se a URL não tem protocolo
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = `http://${url}`;
-    }
-    
-    // Remover parâmetros desnecessários que podem causar problemas
-    const cleanUrl = url.split('?')[0];
-    
-    console.log(`PRESERVANDO URL ORIGINAL DO APOIOENTREGA: ${cleanUrl}`);
-    return cleanUrl;
+    // Preservar a URL original sem modificação
+    console.log(`PRESERVANDO URL ORIGINAL DO APOIOENTREGA: ${url}`);
+    return url;
   }
   
   // Se já é uma URL local, retornar sem modificação
@@ -136,8 +110,10 @@ export function getLocalImageUrl(url: string, productName?: string, category?: s
     return url;
   }
   
-  // Se tem extensão de imagem e não é um placeholder externo, tentar usar diretamente
-  if (url.match(/\.(jpeg|jpg|gif|png)$/i) && !url.includes('placeholder.com')) {
+  // Se é uma URL externa completa com extensão de imagem, usá-la diretamente
+  if ((url.startsWith('http://') || url.startsWith('https://')) && 
+      url.match(/\.(jpeg|jpg|gif|png)$/i) && 
+      !url.includes('placeholder.com')) {
     return url;
   }
   

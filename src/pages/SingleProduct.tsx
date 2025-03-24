@@ -3,6 +3,7 @@ import {
   Dropdown,
   ProductItem,
   QuantityInput,
+  ProductImage,
 } from "../components";
 import { useParams } from "react-router-dom";
 import React, { useEffect, useState } from "react";
@@ -12,10 +13,12 @@ import WithNumberInputWrapper from "../utils/withNumberInputWrapper";
 import { formatCategoryName } from "../utils/formatCategoryName";
 import toast from "react-hot-toast";
 import customFetch from "../utils/customFetch";
+import { sanitizeHtml } from "../utils/formatHtml";
 
 const SingleProduct = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [singleProduct, setSingleProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<Product | null>(null);
   // defining default values for input fields
   const [quantity, setQuantity] = useState<number>(1);
   const params = useParams<{ id: string }>();
@@ -91,31 +94,16 @@ const SingleProduct = () => {
     <div className="max-w-screen-xl mx-auto px-4 py-8 sm:py-16">
       {singleProduct ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Product Image */}
-            <div className="relative aspect-square w-full">
-              <img
-                src={singleProduct.image}
-                alt={singleProduct.title}
-                className="w-full h-full object-cover rounded-lg"
-                onError={(e) => {
-                  e.currentTarget.src = '/images/placeholder-product.jpg';
-                  e.currentTarget.onerror = () => {
-                    e.currentTarget.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABZ0RVh0Q3JlYXRpb24gVGltZQAwNi8yOS8xMw==';
-                    e.currentTarget.onerror = null;
-                  };
-                }}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Coluna da imagem */}
+            <div className="lg:col-span-1 w-full overflow-hidden rounded-lg shadow-md">
+              <ProductImage 
+                src={singleProduct?.image || product?.image || '/img/placeholder-product.jpg'} 
+                alt={singleProduct?.title || product?.title || 'Produto'} 
+                className="w-full h-auto object-cover"
+                productId={singleProduct?.id || product?.id || ''}
+                source={singleProduct?.source || product?.source || ''}
               />
-              {singleProduct.featured && (
-                <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm">
-                  Oferta
-                </div>
-              )}
-              {singleProduct.isOrganic && (
-                <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm">
-                  Orgânico
-                </div>
-              )}
             </div>
 
             {/* Product Info */}
@@ -156,7 +144,10 @@ const SingleProduct = () => {
 
               <div className="border-t border-gray-200 pt-4">
                 <h3 className="text-lg font-semibold mb-2">Descrição</h3>
-                <p className="text-gray-700">{singleProduct.description}</p>
+                <div 
+                  className="text-gray-700"
+                  dangerouslySetInnerHTML={sanitizeHtml(singleProduct.description)}
+                ></div>
               </div>
               
               {singleProduct.nutritionalInfo && (
@@ -227,10 +218,10 @@ const SingleProduct = () => {
                 <Button
                   name="addToCart"
                   text="Adicionar ao Carrinho"
-                  purpose="primary"
+                  mode="primary"
                   disabled={singleProduct.stock <= 0}
                   onClick={handleAddToCart}
-                  styles="w-full md:w-auto"
+                  className="w-full md:w-auto"
                 />
               </div>
             </div>
@@ -250,15 +241,7 @@ const SingleProduct = () => {
                 .map((product) => (
                   <ProductItem
                     key={product.id}
-                    id={product.id}
-                    title={product.title}
-                    price={product.price}
-                    category={product.category}
-                    description={product.description}
-                    stock={product.stock}
-                    popularity={product.popularity}
-                    image={product.image}
-                    featured={product.featured}
+                    product={product}
                   />
                 ))}
             </div>

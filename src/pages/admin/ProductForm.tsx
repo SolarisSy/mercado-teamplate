@@ -365,7 +365,7 @@ const ProductForm = () => {
               >
                 <option value="">Select a category</option>
                 {!loadingCategories && categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
+                  <option key={cat.id} value={cat.slug}>
                     {cat.name}
                   </option>
                 ))}
@@ -497,14 +497,11 @@ const ProductForm = () => {
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
               >
-                <option value="unidade">Unidade</option>
-                <option value="kg">Quilograma (kg)</option>
-                <option value="g">Grama (g)</option>
-                <option value="L">Litro (L)</option>
-                <option value="ml">Mililitro (ml)</option>
-                <option value="pct">Pacote</option>
-                <option value="cx">Caixa</option>
-                <option value="dz">Dúzia</option>
+                {["unidade", "kg", "g", "ml", "l", "pacote", "caixa"].map((unitOption) => (
+                  <option key={unitOption} value={unitOption}>
+                    {unitOption}
+                  </option>
+                ))}
               </select>
             </div>
             

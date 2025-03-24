@@ -30,6 +30,7 @@ const ShopPageContent = ({ category, page }: ShopPageContentProps) => {
     produtos: []
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { categories } = useCategories();
   
   const productsPerPage = 12;
@@ -37,43 +38,54 @@ const ShopPageContent = ({ category, page }: ShopPageContentProps) => {
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
+      setError(null);
+      
       try {
         // Encontrar o categoryId correspondente ao slug da categoria selecionada
         let categoryId = '';
+        let categorySlug = '';
+        
         if (category) {
           const selectedCategory = categories.find(cat => cat.slug === category);
           if (selectedCategory) {
             categoryId = selectedCategory.id;
+            categorySlug = selectedCategory.slug;
+          } else {
+            console.warn(`Categoria não encontrada para o slug: ${category}`);
           }
         }
 
-        // Construir a URL com filtro de categoryId, se disponível
+        // Construir a URL com filtro de categoria, se disponível
         let url = `/products?_page=${page}&_limit=${productsPerPage}`;
+        
         if (categoryId) {
-          // Adicionar filtro de categoryId à URL
-          url = `/products?categoryId=${categoryId}&_page=${page}&_limit=${productsPerPage}`;
+          // Adicionar filtro de categoria à URL
+          url = `/products?category=${categorySlug}&_page=${page}&_limit=${productsPerPage}`;
         }
+        
         console.log(`Buscando produtos com URL: ${url}`);
         
         // Primeira solicitação para obter os produtos da página atual
         const response = await customFetch.get(url);
-        const dataFromServer = response.data;
+        const dataFromServer = response.data || [];
         
-        // Solicitação adicional para obter todos os produtos ou apenas da categoria atual
-        const allProductsUrl = categoryId ? `/products?categoryId=${categoryId}` : '/products';
+        // Solicitação adicional para obter a contagem total
+        const allProductsUrl = categoryId ? `/products?category=${categorySlug}` : '/products';
         const allProductsResponse = await customFetch.get(allProductsUrl);
-        const allProducts = allProductsResponse.data;
+        const allProducts = allProductsResponse.data || [];
         
-        // Cálculo correto de totalCount (total de produtos da categoria, se filtrado)
+        // Cálculo correto de totalCount
         const totalCount = allProducts.length;
         
-        // Cálculo manual da página correta de produtos
+        // Garantir que estamos recebendo os produtos corretos para a página atual
         let productsToShow = dataFromServer;
         
-        // Se estamos na página 2 ou maior e recebemos os mesmos produtos da página 1,
-        // vamos pegar manualmente os produtos corretos
+        // Se estamos na página 2 ou maior e o servidor não está paginando corretamente,
+        // realizar paginação manual
         if (page > 1 && dataFromServer.length > 0 && allProducts.length > 0 && 
-            dataFromServer[0]?.id === allProducts[0]?.id) {
+            (dataFromServer.length !== productsPerPage || 
+             (dataFromServer[0]?.id === allProducts[0]?.id && page !== 1))) {
+          console.log('Realizando paginação manual para a página', page);
           const startIndex = (page - 1) * productsPerPage;
           productsToShow = allProducts.slice(startIndex, startIndex + productsPerPage);
         }
@@ -92,6 +104,7 @@ const ShopPageContent = ({ category, page }: ShopPageContentProps) => {
         setProducts(result);
       } catch (error) {
         console.error('Erro ao buscar produtos:', error);
+        setError('Falha ao carregar os produtos. Por favor, tente novamente.');
         setProducts({
           url: '',
           totalCount: 0,
@@ -141,6 +154,13 @@ const ShopPageContent = ({ category, page }: ShopPageContentProps) => {
         </div>
       </div>
 
+      {/* Mensagem de erro */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <p>{error}</p>
+        </div>
+      )}
+
       {/* Lista de produtos */}
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
@@ -159,7 +179,11 @@ const ShopPageContent = ({ category, page }: ShopPageContentProps) => {
           
           {/* Paginação */}
           <div className="mt-12">
-            <Pagination currentPage={page} totalPages={products.totalPages} baseUrl={category ? `/shop/${category}` : '/shop'} />
+            <Pagination 
+              currentPage={page} 
+              totalPages={products.totalPages} 
+              baseUrl={category ? `/shop/${category}` : '/shop'} 
+            />
           </div>
         </>
       ) : (

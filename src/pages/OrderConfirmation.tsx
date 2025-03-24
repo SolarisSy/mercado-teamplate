@@ -188,11 +188,11 @@ const OrderConfirmation = () => {
                       <div className="flex items-center">
                         <div className="w-16 h-16 rounded-md overflow-hidden hidden md:block">
                           <img 
-                            src={item.image || '/placeholder-product.jpg'} 
+                            src={item.image || '/img/placeholder-product.jpg'} 
                             alt={item.title}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              e.currentTarget.src = '/placeholder-product.jpg';
+                              e.currentTarget.src = '/img/placeholder-product.jpg';
                             }}
                           />
                         </div>

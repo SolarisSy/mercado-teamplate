@@ -143,6 +143,9 @@ Módulo responsável por extrair produtos e imagens de www.apoioentrega.com e di
 **Dependências:**
 - Axios para requisições HTTP
 - Sistema de caching em memória
+- fs-extra para manipulação de arquivos
+- uuid para geração de identificadores únicos
+- crypto para hashing de URLs
 
 ### [AutoImportSystem]
 **Categoria:** Importação automática
@@ -237,108 +240,63 @@ Módulo responsável pela autenticação e autorização no sistema.
    c. Importa para o catálogo da loja
 3. O painel de controle exibe estatísticas em tempo real do processo
 
-### Controller (src/scraper/controller.js)
+### ScraperController
+**Arquivo:** `src/scraper/controller.js`
+**Descrição:** Controlador principal para o scraper de produtos do apoioentrega.
 
-**Funções:**
-- `importProductToStore(scraperProduct)`: Importa um produto do scraper para a loja
-  - Parâmetros:
-    - `scraperProduct`: Objeto com dados do produto a ser importado
-  - Validações:
-    - Verifica existência e formato dos dados obrigatórios
-    - Valida URLs de imagens e preserva URLs do apoioentrega
-    - Garante que a resposta da API contém os dados esperados
-  - Retorno:
-    - Sucesso: Objeto com ID do produto importado
-    - Erro: Objeto com detalhes do erro encontrado
+**Funcionalidades principais:**
+- Extração de produtos do site apoioentrega.com
+- Mapeamento de dados para o formato da loja
+- Importação automática de produtos
+- Importação manual de produtos
+- Importação em massa de todos os produtos disponíveis
+- Download e armazenamento local de imagens
 
-### ScraperProductsList (src/components/ScraperProductsList.tsx)
+**Métodos principais:**
+- `initialize()`: Inicializa o controlador e configura cache
+- `startAutoImport()`: Inicia a importação automática periódica
+- `stopAutoImport()`: Para a importação automática
+- `runAutoImport()`: Executa um ciclo de importação automática
+- `extractProducts(limit)`: Extrai produtos até o limite especificado
+- `extractProductDetails(productId)`: Extrai detalhes de um produto específico
+- `importProductToStore(product)`: Importa um produto para a loja, incluindo download de imagens
+- `downloadImage(imageUrl, productId)`: Baixa e salva uma imagem localmente
+- `importAllProducts(batchSize, delayBetweenBatches)`: Importa todos os produtos disponíveis em lotes
+- `getImportAllStatus()`: Retorna o status atual da importação em massa
 
-**Componente:**
-- Responsável por exibir e gerenciar a lista de produtos do scraper
-- Implementa a interface de importação de produtos
+**Rotas API disponibilizadas:**
+- `GET /scraper/products`: Lista produtos extraídos (limitado por padrão a 100)
+- `GET /scraper/products/:skuId`: Obtém detalhes de um produto específico
+- `POST /api/import-product`: Importa um único produto para a loja
+- `POST /scraper/auto-import/start`: Inicia importação automática
+- `POST /scraper/auto-import/stop`: Para importação automática
+- `GET /scraper/auto-import/status`: Obtém status da importação automática
+- `POST /scraper/auto-import/run-now`: Executa importação automática imediatamente
+- `POST /scraper/import-all-products`: Inicia importação em massa de todos os produtos
+- `GET /scraper/import-all-products/status`: Obtém status detalhado da importação em massa
+- `POST /scraper/import-all-products/cancel`: Cancela a importação em massa em andamento
 
-**Funções:**
-- `importProduct(product)`: Prepara e envia produto para importação
-  - Validações:
-    - Verifica dados obrigatórios (título, preço, categoria)
-    - Valida formato do preço
-    - Verifica URLs de imagens
-  - Tratamento de erros:
-    - 400: Dados inválidos ou mal formatados
-    - 409: Produto duplicado
-    - 500: Erro interno do servidor
-    - Outros: Erros de rede ou desconhecidos
+**Sistema de Importação em Massa:**
+- **Funcionalidade**: Importação gradual de todos os produtos disponíveis na API
+- **Parâmetros configuráveis**:
+  - `batchSize`: Número de produtos por lote (padrão: 20)
+  - `delayBetweenBatches`: Intervalo entre lotes em ms (padrão: 3000)
+- **Rastreamento de progresso**:
+  - Total de produtos encontrados
+  - Produtos importados com sucesso
+  - Falhas de importação
+  - Lote atual em processamento
+  - Tempo decorrido desde o início
+  - Taxa de importação (produtos por segundo)
+  - Tempo estimado para conclusão
+- **Mecanismos de segurança**:
+  - Cancelamento automático após muitas falhas consecutivas
+  - Atrasos entre lotes para não sobrecarregar a API
+  - Verificação de duplicidade antes da importação
+  - Tratamento robusto de erros com tentativas de recuperação
 
-**Helpers:**
-- `getLocalImageUrl(url)`: Processa URLs de imagens
-  - Preserva URLs do apoioentrega
-  - Retorna URL local para outras imagens
-- `validateProduct(product)`: Valida dados do produto antes do envio
-  - Verifica campos obrigatórios
-  - Valida formato dos dados
-  - Retorna objeto com resultado da validação
-
-### [ImportSystem]
-**Categoria:** Importação de Produtos
-**Localização:** `src/scraper/controller.js`
-
-**Descrição:**
-Sistema responsável por importar produtos do apoioentrega.com e gerenciar o processo de importação automática.
-
-**Componentes principais:**
-- `importProductToStore(product)`: Processa e importa um produto para o sistema
-  - Parâmetros:
-    - `product`: Objeto com dados do produto a ser importado
-  - Processamento:
-    - Valida dados obrigatórios
-    - Processa URLs de imagens do apoioentrega
-    - Preserva URLs originais no banco de dados
-    - Adiciona campos de rastreamento
-  - Retorno:
-    - Objeto do produto formatado e salvo
-
-- `extractProducts(limit)`: Extrai produtos do site alvo
-  - Parâmetros:
-    - `limit`: Número máximo de produtos a extrair
-  - Processamento:
-    - Busca produtos na API do apoioentrega
-    - Extrai informações relevantes
-    - Formata dados para importação
-  - Retorno:
-    - Array de produtos extraídos
-
-**Estrutura de dados:**
-- Produto no db.json:
-  ```json
-  {
-    "id": "imported_[ID]",
-    "title": "string",
-    "description": "string",
-    "price": number,
-    "category": "string",
-    "image": "string", // Imagem principal
-    "images": ["string"], // Todas as imagens
-    "stock": number,
-    "source": "apoioentrega",
-    "importedAt": "ISO date",
-    "originalId": "string",
-    "originalImages": ["string"], // URLs originais preservadas
-    "lastUpdated": "ISO date"
-  }
-  ```
-
-**APIs Expostas:**
-- POST `/api/import-product` - Importação individual de produtos
-- POST `/scraper/auto-import/start` - Inicia importação automática
-- POST `/scraper/auto-import/stop` - Para importação automática
-- GET `/scraper/auto-import/status` - Status da importação
-- POST `/scraper/auto-import/run-now` - Força importação imediata
-
-**Dependências:**
-- Express.js para rotas
-- Axios para requisições HTTP
-- NodeCache para caching de produtos
-- db.json para persistência de dados
+**Interface de usuário associada:**
+- `ScraperProductsList.tsx`: Componente de interface para controle e monitoramento do scraper, incluindo painel dedicado à importação em massa com barra de progresso e estatísticas em tempo real.
 
 **Status:** Atualizado
 
@@ -350,34 +308,50 @@ Sistema responsável por importar produtos do apoioentrega.com e gerenciar o pro
 Componente React responsável por exibir um produto na interface, com suporte especial para imagens do apoioentrega.
 
 **Props:**
-- `product`: Objeto completo do produto
-- Props individuais para compatibilidade:
+- `product`: Objeto completo do produto (opcional)
   - `id`: ID do produto
   - `title`: Título do produto
+  - `description`: Descrição do produto
   - `price`: Preço do produto
-  - `image`: URL da imagem principal
   - `category`: Categoria do produto
-  - Outras props opcionais...
+  - `image`: URL da imagem principal
+  - `stock`: Estoque disponível (opcional)
+  - `featured`: Flag de produto em destaque (opcional)
+  - `source`: Origem do produto (opcional)
+
+- **Propriedades individuais** (alternativas ao objeto product, para retrocompatibilidade):
+  - `id`: ID do produto
+  - `title`: Título do produto
+  - `description`: Descrição do produto
+  - `price`: Preço do produto
+  - `category`: Categoria do produto
+  - `image` ou `imageUrl`: URL da imagem principal
+  - `stock`: Estoque disponível
+  - `featured`: Flag de produto em destaque
+  - `source`: Origem do produto
+  - `isApoioEntregaImage`: Flag indicando se a imagem é do apoioentrega
 
 **Funcionalidades:**
 - Exibição de imagens:
-  - Usa `image` como fonte principal
-  - Fallback para `images[0]` se necessário
-  - Preserva URLs do apoioentrega
-  - Trata erros de carregamento com fallbacks
-  - Suporta troca de protocolo HTTP/HTTPS
-
+  - Usa o componente `ProductImage` para tratamento robusto de imagens
+  - Suporte para produtos com origem no apoioentrega
+  - Sistema de fallback para imagens com erro
 - Badges e indicadores:
-  - Ofertas
   - Produtos novos
-  - Produtos orgânicos
   - Status de estoque
-  - Descontos
+  - Preços com desconto
+  - Botão de adicionar ao carrinho
+- Tratamento de erros:
+  - Verificação de dados mínimos necessários
+  - Exibição de mensagem de erro quando dados são insuficientes
+  - Usar dados do objeto `product` ou props individuais com priorização
 
 **Dependências:**
 - React Router para navegação
 - Redux para gerenciamento de estado
-- imageUtils para processamento de imagens
+- formatCurrency para formatação de preços
+- formatCategoryName para formatação de categorias
+- htmlToPlainText para processar descrições HTML
 
 **Status:** Atualizado
 
@@ -408,6 +382,18 @@ Módulo de utilitários para manipulação de imagens no sistema, fornecendo fun
   - Retorno:
     - URL da imagem ou placeholder
 
+- `getLocalImageUrl(url, title, category)`: Obtém a URL local para uma imagem
+  - Parâmetros:
+    - `url`: URL original da imagem
+    - `title`: Título do produto (opcional, para fallback)
+    - `category`: Categoria do produto (opcional, para fallback)
+  - Processamento:
+    - Preserva URLs de apoioentrega.vteximg.com.br
+    - Processa URLs para garantir formato correto
+    - Fornece fallbacks para URLs ausentes ou inválidas
+  - Retorno:
+    - URL processada ou fallback
+
 - `isValidImageUrl(url)`: Verifica se uma URL é válida
   - Parâmetros:
     - `url`: URL a ser verificada
@@ -427,7 +413,208 @@ Módulo de utilitários para manipulação de imagens no sistema, fornecendo fun
     - `true` se a URL é um placeholder
 
 **Dependências:**
-- `imageUtils.ts` para processamento de URLs
 - `typings.d.ts` para tipos do sistema
 
 **Status:** Atualizado
+
+### ProductImage
+**Arquivo:** `src/components/ProductImage.tsx`
+**Descrição:** Componente responsável por exibir imagens de produtos com tratamento de erros e fallbacks.
+
+**Funcionalidades:**
+- Exibe imagens de produtos com suporte a URLs externas e locais
+- Preserva URLs originais do apoioentrega.vteximg.com.br
+- Implementa sistema de fallback em caso de erro de carregamento
+- Tenta alternativas como troca de protocolo HTTP/HTTPS antes de usar placeholder
+- Suporta classes customizadas via props
+
+**Props:**
+- `src`: URL da imagem a ser exibida
+- `alt`: Texto alternativo para a imagem
+- `title`: Título do produto (opcional, usado para fallback)
+- `category`: Categoria do produto (opcional, usado para fallback)
+- `className`: Classes CSS a serem aplicadas (opcional)
+
+**Dependências:**
+- React
+- Usa sistema simplificado para preservação de URLs originais
+- Não depende do sistema de manipulação de imagens global
+
+**Relacionado com:**
+- ProductItem
+- SingleProduct
+- OrderConfirmation
+
+### [FormatHtml]
+**Categoria:** Utilitários
+**Localização:** `src/utils/formatHtml.ts`
+
+**Descrição:**
+Módulo de utilitários para tratamento e sanitização de HTML, permitindo exibição segura de conteúdo HTML sem vulnerabilidades XSS.
+
+**Funções principais:**
+- `sanitizeHtml(htmlContent)`: Sanitiza conteúdo HTML para uso seguro com dangerouslySetInnerHTML
+  - Parâmetros:
+    - `htmlContent`: String contendo HTML (possivelmente com entidades escapadas)
+  - Processamento:
+    - Decodifica entidades HTML se necessário
+    - Sanitiza o conteúdo usando DOMPurify
+    - Limita tags permitidas para segurança
+  - Retorno:
+    - Objeto com formato { __html: string } para uso com dangerouslySetInnerHTML
+
+- `htmlToPlainText(htmlContent)`: Converte HTML para texto plano removendo todas as tags
+  - Parâmetros:
+    - `htmlContent`: String contendo HTML (possivelmente com entidades escapadas)
+  - Processamento:
+    - Decodifica entidades HTML se necessário
+    - Extrai apenas o conteúdo textual
+  - Retorno:
+    - String contendo apenas o texto, sem tags ou formatação HTML
+
+- `decodeHtmlEntities(html)`: Decodifica entidades HTML escapadas sem depender do DOM
+  - Parâmetros:
+    - `html`: String contendo entidades HTML escapadas
+  - Processamento:
+    - Substitui entidades comuns (&lt;, &gt;, &amp;, etc.) por seus caracteres equivalentes
+  - Retorno:
+    - String com entidades HTML decodificadas
+
+**Dependências:**
+- DOMPurify para sanitização segura de HTML
+
+**Status:** Novo
+
+**Utilizações:**
+- Em `ProductItem.tsx` para exibição segura de descrições em cards de produtos
+- Em `SingleProduct.tsx` para exibição de descrições formatadas em páginas de detalhes
+- Indiretamente no processo de importação para tratamento de HTML escapado
+
+### Atualização do importProductToStore em Controller.js
+
+**Localização:** `src/scraper/controller.js`
+
+**Novas funcionalidades:**
+- Processamento de descrições HTML durante importação:
+  - Detecção automática de entidades HTML escapadas (&lt;, &gt;, etc.)
+  - Decodificação para HTML válido
+  - Preservação de estrutura HTML em descrições de produtos
+
+**Fluxo atualizado de importação:**
+1. Recebimento dos dados do produto (API externa ou formulário)
+2. Validação dos dados obrigatórios
+3. Processamento de descrição HTML (NEW):
+   - Verificação de entidades HTML escapadas
+   - Decodificação para HTML válido
+4. Processamento de imagens:
+   - Download e armazenamento local
+   - Preservação de URLs originais
+5. Criação do objeto formatado para o sistema
+6. Validação final e persistência no banco de dados
+
+**Impacto:**
+- Melhoria na qualidade das descrições de produtos importados
+- Preservação da formatação original das descrições
+- Experiência de usuário aprimorada na visualização de produtos
+
+**Status:** Atualizado
+
+### Sistema de Imagens
+
+O sistema de renderização de imagens foi reforçado para garantir melhor exibição em todas as páginas da aplicação:
+
+- `ProductImage.tsx`: Componente responsável por renderizar imagens de produtos com tratamento robusto de erros.
+  - Implementa múltiplas estratégias de fallback para garantir que alguma imagem seja sempre exibida
+  - Suporta diferentes tipos de caminhos de imagem (local, relativo, absoluto)
+  - Possui tratamento especial para imagens do apoioentrega
+  - Usa placeholders alternativos em cascata quando a imagem principal falha
+
+### Sistema de Categorias
+
+O sistema de categorias foi aprimorado para garantir o correto funcionamento da filtragem e associação de produtos:
+
+- `ShopPageContent.tsx`: Componente que exibe produtos filtrados por categoria
+  - Implementa paginação manual para garantir funcionamento correto
+  - Utiliza o slug da categoria como critério de filtragem
+  - Tratamento robusto de erros durante a busca de produtos
+
+- `CategoriesManager.tsx`: Componente de administração para gerenciar categorias
+  - CRUD completo de categorias (criação, leitura, atualização, exclusão)
+  - Interface para associar produtos a categorias
+  - Suporte para upload de imagens de categorias
+
+### Sistema de Integração com Apoioentrega
+
+O processo de importação de produtos do apoioentrega foi aprimorado:
+
+- `controller.js`: Implementa funções para extração e importação de produtos
+  - `downloadImage`: Baixa e salva imagens localmente
+  - `importProductToStore`: Processa produtos para o formato da loja, incluindo:
+    - Limpeza de tags HTML nas descrições
+    - Download e armazenamento local de imagens
+    - Associação com categorias apropriadas
+
+## Configuração do servidor
+- server.js: servidor principal da aplicação
+  - Utiliza json-server para fornecer uma API RESTful
+  - Configuração de CORS para permitir acesso cross-origin incluindo todos os métodos HTTP necessários (GET, POST, PUT, DELETE, PATCH)
+  - Configuração de middlewares de parsing e tratamento de requisições
+  - Configuração de roteamento
+  - Inicialização do controller do scraper
+
+## Interface do Administrador
+- src/pages/admin/CategoriesManager.tsx: painel de gerenciamento de categorias
+  - CRUD completo de categorias
+  - Upload e visualização de imagens de categorias
+  - Associação de produtos a categorias
+- src/pages/admin/ProductForm.tsx: formulário para criação e edição de produtos
+  - Suporte para campos básicos (título, preço, categoria)
+  - Suporte para campos específicos de supermercado (peso, unidade, marca, etc.)
+  - Suporte para informações nutricionais
+  - Upload de imagens (local e por URL)
+  - Validação completa de dados
+  - Renderização otimizada com chaves (keys) únicas para listas
+- src/pages/admin/CarouselManager.tsx: painel de gerenciamento de banners do carrossel
+  - CRUD completo de banners promocionais para o carrossel da página inicial
+  - Configuração de título, imagem, link e ordem de exibição
+  - Ativação/desativação de banners individuais
+  - Sistema de ordenação para controlar a sequência de exibição
+  - Distinto do sistema de categorias (não gerencia categorias da loja)
+
+### [Button]
+**Categoria:** Componentes
+**Localização:** `src/components/Button.tsx`
+
+**Descrição:**
+Componente React para renderizar botões estilizados conforme o design system da aplicação.
+
+**Props:**
+- `mode`: Determina o estilo visual do botão (obrigatório)
+  - `"primary"`: Botão com fundo na cor primária e texto branco
+  - `"secondary"`: Botão com fundo na cor secundária e texto branco
+  - `"white"`: Botão com fundo branco, borda cinza e texto na cor primária
+  - `"transparent"`: Botão transparente com borda na cor primária e texto na cor primária
+- `text`: Texto a ser exibido no botão (obrigatório)
+- Suporta todas as propriedades HTML nativas de botões (`ButtonHTMLAttributes<HTMLButtonElement>`)
+  - `onClick`: Função a ser executada no clique
+  - `disabled`: Estado de desabilitado
+  - `className`: Classes CSS adicionais
+  - etc.
+
+**Exemplo de uso:**
+```tsx
+<Button
+  mode="primary"
+  text="Adicionar ao Carrinho"
+  onClick={handleAddToCart}
+  disabled={!available}
+  className="w-full md:w-auto"
+/>
+```
+
+**Observações:**
+- O componente aplica estilos base que incluem largura completa, altura, alinhamento e tamanho de texto
+- Classes CSS adicionais podem ser aplicadas via prop `className`
+- Se um `mode` inválido for fornecido, será exibida a mensagem "No valid mode selected"
+
+**Status:** Documentado

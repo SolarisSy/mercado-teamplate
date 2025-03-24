@@ -2,6 +2,10 @@
 // Como o server.js está usando CommonJS e não consegue importar arquivos TypeScript diretamente
 const axios = require('axios');
 const NodeCache = require('node-cache');
+const path = require('path');
+const fs = require('fs-extra');
+const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
 
 /**
  * Controller para o scraper
@@ -9,7 +13,7 @@ const NodeCache = require('node-cache');
 class ScraperController {
   constructor() {
     this.products = [];
-    this.cache = {};
+    this.cache = new Map();
     this.productMemory = new Set();
     this.autoImportStatus = false; // Garantir que importação automática inicie desligada
     this.autoImportTimer = null;
@@ -17,6 +21,16 @@ class ScraperController {
     this.baseUrl = 'https://www.apoioentrega.com.br';
     this.autoImportInterval = null; // Inicialmente nulo (desligado)
     this.importedProducts = new Set(); // Conjunto para rastrear produtos já importados
+    this.importProgress = {
+      isRunning: false,
+      total: 0,
+      imported: 0,
+      failed: 0,
+      startTime: null,
+      endTime: null,
+      status: 'idle', // 'idle', 'running', 'completed', 'failed'
+      lastError: null
+    };
     this.initialize();
   }
 
@@ -122,6 +136,90 @@ class ScraperController {
   }
 
   /**
+   * Baixa e salva uma imagem localmente
+   * @param {string} imageUrl URL da imagem para baixar
+   * @param {string} productId ID do produto
+   * @returns {Promise<string>} Caminho local da imagem salva
+   */
+  async downloadImage(imageUrl, productId) {
+    try {
+      // Validar URL da imagem
+      if (!imageUrl || typeof imageUrl !== 'string') {
+        console.log('URL de imagem inválida:', imageUrl);
+        return '/img/placeholder-product.jpg';
+      }
+
+      // Ignorar URLs locais
+      if (imageUrl.startsWith('/')) {
+        console.log('Imagem já é local, ignorando:', imageUrl);
+        return imageUrl;
+      }
+
+      // Obter extensão do arquivo a partir da URL
+      let fileExtension = 'jpg';
+      if (imageUrl.includes('.')) {
+        const urlParts = imageUrl.split('?')[0].split('.');
+        const extension = urlParts[urlParts.length - 1].toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+          fileExtension = extension;
+        }
+      }
+
+      // Gerar um nome único para o arquivo baseado no produto e hash da URL
+      const urlHash = crypto.createHash('md5').update(imageUrl).digest('hex').substring(0, 8);
+      const safeProductId = productId.replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `${safeProductId}_${urlHash}.${fileExtension}`;
+
+      // Diretório para salvar as imagens
+      const productImagesDir = path.join(process.cwd(), 'public', 'img', 'produtos');
+      
+      // Criar diretório se não existir
+      if (!fs.existsSync(productImagesDir)) {
+        fs.mkdirSync(productImagesDir, { recursive: true });
+      }
+
+      // Caminho completo do arquivo
+      const filePath = path.join(productImagesDir, fileName);
+      
+      // Caminho relativo para uso no frontend
+      const relativePath = `/img/produtos/${fileName}`;
+
+      // Verificar se o arquivo já existe para evitar downloads duplicados
+      if (fs.existsSync(filePath)) {
+        console.log('Imagem já existe localmente:', relativePath);
+        return relativePath;
+      }
+
+      console.log('Baixando imagem:', imageUrl);
+      
+      // Fazer a requisição para baixar a imagem
+      const response = await axios({
+        method: 'GET',
+        url: imageUrl,
+        responseType: 'arraybuffer',
+        timeout: 10000, // 10 segundos de timeout
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Referer': 'https://www.apoioentrega.com.br/',
+          'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+        }
+      });
+
+      // Salvar o arquivo
+      await fs.writeFile(filePath, response.data);
+      
+      console.log('Imagem salva com sucesso:', relativePath);
+      return relativePath;
+    } catch (error) {
+      console.error('Erro ao baixar imagem:', {
+        url: imageUrl,
+        error: error.message
+      });
+      return '/img/placeholder-product.jpg';
+    }
+  }
+
+  /**
    * Importa um produto para a loja
    * @param {Object} product Produto a ser importado
    */
@@ -137,35 +235,82 @@ class ScraperController {
         throw new Error('Dados obrigatórios faltando para importação do produto');
       }
 
-      // Processar imagens
+      // Processar descrição HTML
+      let processedDescription = product.description || product.title;
+      
+      // Verificar se a descrição contém tags HTML escapadas e decodificá-las
+      if (typeof processedDescription === 'string' && 
+          (processedDescription.includes('&lt;') || processedDescription.includes('&gt;'))) {
+        console.log('Detectadas tags HTML escapadas na descrição. Decodificando...');
+        
+        // Decodificar entidades HTML comuns
+        processedDescription = processedDescription
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+          
+        console.log('Descrição decodificada com sucesso');
+      }
+      
+      // Remover completamente todas as tags HTML da descrição
+      if (typeof processedDescription === 'string' && processedDescription.includes('<')) {
+        console.log('Removendo tags HTML da descrição');
+        // Primeiro método: substituir todas as tags HTML por espaço
+        processedDescription = processedDescription.replace(/<[^>]*>/g, ' ');
+        
+        // Segundo método: usar DOMParser se estiver no navegador (não funciona no Node.js)
+        // processedDescription = new DOMParser().parseFromString(processedDescription, 'text/html').body.textContent || '';
+        
+        // Remover múltiplos espaços consecutivos
+        processedDescription = processedDescription.replace(/\s+/g, ' ').trim();
+        
+        console.log('Tags HTML removidas com sucesso');
+      }
+
+      // Processar e baixar imagens
       let processedImages = [];
+      const originalImages = [];
+      
       if (Array.isArray(product.images)) {
-        processedImages = product.images.map(img => {
-          // Se a imagem já é uma URL completa do apoioentrega, preservá-la
+        // Armazenar as URLs originais para referência
+        originalImages.push(...product.images);
+        
+        // Processar e baixar cada imagem
+        for (const img of product.images) {
+          // Se a imagem já é uma URL completa do apoioentrega, preservá-la e baixá-la
           if (img.includes('apoioentrega.vteximg.com.br')) {
             // Remover parâmetros da URL que podem causar problemas
             const cleanUrl = img.split('?')[0];
+            
             // Garantir que a URL use HTTP se não tiver protocolo
-            if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-              return `http://${cleanUrl}`;
+            let fullUrl = cleanUrl;
+            if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+              fullUrl = `http://${fullUrl}`;
             }
-            return cleanUrl;
+            
+            // Baixar e salvar a imagem localmente
+            const localPath = await this.downloadImage(fullUrl, product.id);
+            processedImages.push(localPath);
           }
-          
-          // Se a imagem já é uma URL completa de outra fonte, mantê-la
-          if (img.startsWith('http://') || img.startsWith('https://')) {
-            return img;
+          // Se a imagem já é uma URL completa de outra fonte, baixá-la
+          else if (img.startsWith('http://') || img.startsWith('https://')) {
+            const localPath = await this.downloadImage(img, product.id);
+            processedImages.push(localPath);
           }
-          
-          // Se é um caminho relativo do apoioentrega, construir a URL completa
-          if (img.includes('/arquivos/') || img.includes('/ids/')) {
+          // Se é um caminho relativo do apoioentrega, construir a URL completa e baixá-la
+          else if (img.includes('/arquivos/') || img.includes('/ids/')) {
             const baseUrl = 'http://apoioentrega.vteximg.com.br';
-            return `${baseUrl}${img.startsWith('/') ? '' : '/'}${img}`;
+            const fullUrl = `${baseUrl}${img.startsWith('/') ? '' : '/'}${img}`;
+            const localPath = await this.downloadImage(fullUrl, product.id);
+            processedImages.push(localPath);
           }
-          
           // Para outros casos, usar o placeholder
-          return '/img/placeholder-product.jpg';
-        });
+          else {
+            processedImages.push('/img/placeholder-product.jpg');
+          }
+        }
       }
 
       // Se não houver imagens, usar o placeholder local
@@ -177,7 +322,7 @@ class ScraperController {
       const systemProduct = {
         id: `imported_${product.id}`, // Adicionar prefixo para evitar conflitos
         title: product.title,
-        description: product.description || product.title,
+        description: processedDescription,
         price: typeof product.price === 'number' ? product.price : parseFloat(product.price) || 0,
         category: product.category || 'Importado',
         image: processedImages[0], // Imagem principal
@@ -187,7 +332,7 @@ class ScraperController {
         importedAt: new Date().toISOString(),
         // Campos adicionais para rastreamento
         originalId: product.id,
-        originalImages: product.images, // Preservar URLs originais
+        originalImages: originalImages, // Preservar URLs originais
         lastUpdated: new Date().toISOString()
       };
 
@@ -551,6 +696,286 @@ class ScraperController {
   }
 
   /**
+   * Importar todos os produtos disponíveis na API gradualmente
+   * @param {number} batchSize Tamanho do lote de produtos por vez (padrão: 20)
+   * @param {number} delayBetweenBatches Atraso em ms entre lotes (padrão: 3000)
+   * @returns {Promise<Object>} Objeto com estatísticas da importação
+   */
+  async importAllProducts(batchSize = 20, delayBetweenBatches = 3000) {
+    try {
+      // Verificar se já está em execução
+      if (this.importProgress.isRunning) {
+        console.log('Importação em massa já está em andamento');
+        return this.importProgress;
+      }
+
+      // Resetar e inicializar o progresso
+      this.importProgress = {
+        isRunning: true,
+        total: 0,
+        imported: 0,
+        failed: 0,
+        startTime: new Date(),
+        endTime: null,
+        status: 'running',
+        lastError: null,
+        batchSize,
+        currentBatch: 0,
+        estimatedTotal: '∞' // Inicialmente desconhecido
+      };
+
+      console.log('Iniciando importação em massa de produtos...');
+      
+      let allProducts = [];
+      let currentPage = 0;
+      let hasMoreProducts = true;
+      let totalFailures = 0;
+      
+      // Continuar buscando e importando enquanto houver produtos disponíveis
+      while (hasMoreProducts) {
+        try {
+          // Incrementar o número do lote atual
+          this.importProgress.currentBatch = currentPage + 1;
+          
+          const fromIndex = currentPage * batchSize;
+          const toIndex = fromIndex + batchSize - 1;
+          
+          console.log(`Buscando lote ${currentPage + 1}: produtos de ${fromIndex} a ${toIndex}...`);
+          
+          // Buscar produtos usando a API
+          const response = await axios.get(`${this.baseUrl}/api/catalog_system/pub/products/search`, {
+            params: {
+              ft: '', // Parâmetro fulltext search vazio para trazer todos os produtos
+              O: 'OrderByPriceDESC', // Ordenação por preço decrescente
+              _from: fromIndex,
+              _to: toIndex,
+            },
+            headers: {
+              'Accept': 'application/json',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+              'Referer': 'https://www.apoioentrega.com.br/',
+              'Origin': 'https://www.apoioentrega.com.br',
+              'Connection': 'keep-alive'
+            },
+            timeout: 15000 // Aumentar timeout para 15 segundos para requisições maiores
+          });
+
+          console.log(`Resposta da API de produtos (lote ${currentPage + 1}):`, response.status);
+          
+          // Verificar se a resposta é um array
+          if (!Array.isArray(response.data)) {
+            console.error('Resposta não é um array:', typeof response.data);
+            hasMoreProducts = false;
+            continue;
+          }
+          
+          // Se não retornou produtos, chegamos ao fim da lista
+          if (response.data.length === 0) {
+            console.log('Não há mais produtos disponíveis, importação completa.');
+            hasMoreProducts = false;
+            continue;
+          }
+
+          // Atualizar estimativa de total se ainda for desconhecido
+          if (this.importProgress.estimatedTotal === '∞' && response.headers['x-total-count']) {
+            const estimatedTotal = parseInt(response.headers['x-total-count'], 10);
+            this.importProgress.estimatedTotal = isNaN(estimatedTotal) ? '∞' : estimatedTotal;
+            console.log(`Estimativa de total de produtos: ${this.importProgress.estimatedTotal}`);
+          }
+
+          // Mapear os produtos para o formato esperado
+          const pageProducts = response.data.map(product => {
+            // Extrair imagens
+            const images = [];
+            if (product.items && product.items.length > 0) {
+              const item = product.items[0];
+              if (item.images && item.images.length > 0) {
+                item.images.forEach(img => {
+                  if (img.imageUrl) {
+                    images.push(img.imageUrl);
+                  }
+                });
+              }
+            }
+
+            // Extrair preço
+            let price = 0;
+            if (product.items && 
+                product.items[0] && 
+                product.items[0].sellers && 
+                product.items[0].sellers[0] && 
+                product.items[0].sellers[0].commertialOffer) {
+              price = product.items[0].sellers[0].commertialOffer.Price || 0;
+            }
+
+            // Extrair categoria
+            let category = 'Importado';
+            if (product.categories && product.categories.length > 0) {
+              // Pegar a última categoria (mais específica)
+              category = product.categories[product.categories.length - 1]
+                .replace(/^\//, '')  // Remove / inicial
+                .replace(/\//g, ' > '); // Substitui / por >
+            }
+
+            return {
+              id: product.productId,
+              title: product.productName,
+              description: product.description || product.metaTagDescription || product.productName,
+              price: price,
+              category: category,
+              images: images.length > 0 ? images : ['https://via.placeholder.com/300x300?text=Sem+Imagem']
+            };
+          });
+
+          console.log(`Encontrados ${pageProducts.length} produtos no lote ${currentPage + 1}`);
+          this.importProgress.total += pageProducts.length;
+          
+          // Importar cada produto individualmente
+          for (const product of pageProducts) {
+            try {
+              // Verificar se o produto já existe
+              const existingProducts = await this.getExistingProducts();
+              const existingProduct = existingProducts.find(p => 
+                p.id === `imported_${product.id}` || 
+                (p.originalId && p.originalId === product.id)
+              );
+              
+              if (existingProduct) {
+                console.log(`Produto ${product.id} já existe no sistema como ${existingProduct.id}, pulando...`);
+                continue;
+              }
+              
+              // Importar o produto
+              console.log(`Importando produto ${product.id}: ${product.title}...`);
+              const result = await this.importProductToStore(product);
+              
+              if (result && result.id) {
+                console.log(`Produto ${product.id} importado com sucesso como ${result.id}`);
+                this.importProgress.imported++;
+                // Adicionar ao conjunto de produtos importados
+                this.importedProducts.add(product.id);
+              } else {
+                console.error(`Falha ao importar produto ${product.id}`);
+                this.importProgress.failed++;
+                totalFailures++;
+              }
+            } catch (importError) {
+              console.error(`Erro ao importar produto ${product.id}:`, importError.message);
+              this.importProgress.failed++;
+              this.importProgress.lastError = importError.message;
+              totalFailures++;
+            }
+          }
+          
+          // Avançar para a próxima página
+          currentPage++;
+          
+          // Adicionar delay para não sobrecarregar a API
+          if (hasMoreProducts) {
+            console.log(`Aguardando ${delayBetweenBatches}ms antes do próximo lote...`);
+            await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
+          }
+          
+          // Se acumulou muitos erros, pausar a importação
+          if (totalFailures > 10) {
+            console.error('Muitos erros consecutivos, abortando importação em massa');
+            hasMoreProducts = false;
+            this.importProgress.status = 'failed';
+            this.importProgress.lastError = 'Muitos erros consecutivos';
+          }
+        } catch (batchError) {
+          console.error(`Erro ao processar lote ${currentPage + 1}:`, batchError.message);
+          totalFailures++;
+          this.importProgress.lastError = batchError.message;
+          
+          // Se falhar 3 vezes consecutivas, abortar
+          if (totalFailures >= 3) {
+            console.error('Falhas consecutivas, abortando importação em massa');
+            hasMoreProducts = false;
+            this.importProgress.status = 'failed';
+          } else {
+            // Adicionar delay maior antes de tentar novamente
+            console.log('Aguardando 10s antes de tentar novamente...');
+            await new Promise(resolve => setTimeout(resolve, 10000));
+          }
+        }
+      }
+      
+      // Finalizar o progresso
+      this.importProgress.isRunning = false;
+      this.importProgress.endTime = new Date();
+      if (this.importProgress.status !== 'failed') {
+        this.importProgress.status = 'completed';
+      }
+      
+      const duration = (this.importProgress.endTime - this.importProgress.startTime) / 1000;
+      console.log(`Importação em massa concluída em ${duration.toFixed(1)}s`);
+      console.log(`Total de produtos: ${this.importProgress.total}`);
+      console.log(`Produtos importados: ${this.importProgress.imported}`);
+      console.log(`Produtos com erro: ${this.importProgress.failed}`);
+      
+      return this.importProgress;
+    } catch (error) {
+      console.error('Erro fatal na importação em massa:', error.message);
+      
+      // Atualizar o progresso com o erro
+      this.importProgress.isRunning = false;
+      this.importProgress.endTime = new Date();
+      this.importProgress.status = 'failed';
+      this.importProgress.lastError = error.message;
+      
+      return this.importProgress;
+    }
+  }
+
+  /**
+   * Obter o status atual da importação em massa
+   * @returns {Object} Estado atual do progresso da importação
+   */
+  getImportAllStatus() {
+    // Calcular tempo decorrido se a importação estiver em andamento
+    if (this.importProgress.isRunning && this.importProgress.startTime) {
+      const elapsedMs = new Date() - this.importProgress.startTime;
+      const elapsedSeconds = Math.floor(elapsedMs / 1000);
+      const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+      const elapsedHours = Math.floor(elapsedMinutes / 60);
+      
+      this.importProgress.elapsed = {
+        hours: elapsedHours,
+        minutes: elapsedMinutes % 60,
+        seconds: elapsedSeconds % 60,
+        formatted: `${elapsedHours}h ${elapsedMinutes % 60}m ${elapsedSeconds % 60}s`
+      };
+      
+      // Calcular taxa de importação e estimativa de tempo restante
+      if (elapsedSeconds > 0 && this.importProgress.imported > 0) {
+        const rate = this.importProgress.imported / elapsedSeconds; // produtos por segundo
+        
+        if (this.importProgress.estimatedTotal !== '∞') {
+          const remaining = this.importProgress.estimatedTotal - this.importProgress.imported - this.importProgress.failed;
+          if (remaining > 0 && rate > 0) {
+            const secondsRemaining = Math.ceil(remaining / rate);
+            const minutesRemaining = Math.floor(secondsRemaining / 60);
+            const hoursRemaining = Math.floor(minutesRemaining / 60);
+            
+            this.importProgress.estimate = {
+              rate: rate.toFixed(2), // produtos por segundo
+              remaining: {
+                hours: hoursRemaining,
+                minutes: minutesRemaining % 60,
+                seconds: secondsRemaining % 60,
+                formatted: `${hoursRemaining}h ${minutesRemaining % 60}m ${secondsRemaining % 60}s`
+              }
+            };
+          }
+        }
+      }
+    }
+    
+    return this.importProgress;
+  }
+
+  /**
    * Registra as rotas do scraper no router do Express
    * @param {*} router - Express router
    */
@@ -600,146 +1025,92 @@ class ScraperController {
     router.post('/api/import-product', async (req, res) => {
       try {
         const product = req.body;
-        console.log('Recebendo requisição para importar produto:', {
-          receivedData: product,
-          bodyType: typeof product,
-          hasProduct: !!product
+        
+        if (!product || !product.id || !product.title) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Dados de produto inválidos'
+          });
+        }
+        
+        console.log('Iniciando importação de produto:', {
+          id: product.id,
+          title: product.title
         });
         
-        // Validação mais robusta dos dados
-        if (!product || typeof product !== 'object') {
-          console.error('Produto inválido ou não fornecido no body da requisição');
-          return res.status(400).json({
-            success: false,
-            message: 'Dados do produto não fornecidos ou inválidos',
-            receivedType: typeof product
-          });
+        // Tratar a URL da imagem, especialmente se for do apoioentrega
+        if (product.imageUrl && typeof product.imageUrl === 'string') {
+          console.log('URL da imagem original:', product.imageUrl);
+          
+          if (product.imageUrl.includes('apoioentrega.vteximg.com.br')) {
+            console.log('Preservando URL original de apoioentrega:', product.imageUrl);
+            product.images = [product.imageUrl];
+          } else {
+            product.images = [product.imageUrl];
+          }
         }
-
-        // Garantir que o produto tenha um ID
-        const productId = product.id || product.productId;
-        if (!productId) {
-          console.error('ID do produto não fornecido:', product);
-          return res.status(400).json({
-            success: false,
-            message: 'ID do produto é obrigatório',
-            receivedData: product
-          });
+        
+        // Processar descrição HTML, se houver
+        if (product.description && typeof product.description === 'string' && 
+            (product.description.includes('&lt;') || product.description.includes('&gt;'))) {
+          console.log('Decodificando entidades HTML na descrição');
+          
+          // Decodificar entidades HTML comuns
+          product.description = product.description
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+          
+          console.log('Descrição decodificada com sucesso');
         }
-
-        // Garantir que o produto tenha um título
-        const productTitle = product.title || product.name || product.productName;
-        if (!productTitle) {
-          console.error('Título do produto não fornecido:', product);
-          return res.status(400).json({
-            success: false,
-            message: 'Título do produto é obrigatório',
-            receivedData: product
-          });
+        
+        // Processar categoria
+        if (product.category && product.category.includes('>')) {
+          console.log('Categoria original:', product.category);
+          product.category = product.category.split('>')[0].trim();
+          console.log('Categoria processada:', product.category);
         }
-
-        // Normalizar os dados do produto
-        const normalizedProduct = {
-          ...product,
-          id: productId,
-          title: productTitle,
-          description: product.description || productTitle,
-          price: product.price || 0,
-          category: product.category || 'Importado',
-          images: Array.isArray(product.images) ? product.images : []
-        };
+        
+        console.log('Produto preparado para importação:', product);
         
         // Verificar se o produto já existe
         const existingProducts = await this.getExistingProducts();
-        console.log('Produtos existentes encontrados:', existingProducts.length);
+        const existingProduct = existingProducts.find(p => 
+          p.id === `imported_${product.id}` || 
+          (p.originalId && p.originalId === product.id)
+        );
         
-        const fullId = `imported_${normalizedProduct.id}`;
-        const isDuplicate = existingProducts.some(p => p.id === fullId || p.id === normalizedProduct.id);
-        
-        if (isDuplicate) {
-          console.log('Produto duplicado detectado:', fullId);
+        if (existingProduct) {
           return res.status(409).json({
             success: false,
             message: 'Produto já existe no sistema',
-            productId: fullId
+            productId: existingProduct.id
           });
         }
         
-        // Processar e importar o produto
-        console.log('Iniciando processamento do produto para importação:', normalizedProduct);
-        const importedProduct = await this.importProductToStore(normalizedProduct);
+        // Importar o produto
+        const result = await this.importProductToStore(product);
         
-        if (!importedProduct) {
-          throw new Error('Falha ao processar o produto para importação');
-        }
-
-        console.log('Produto processado com sucesso:', {
-          id: importedProduct.id,
-          title: importedProduct.title
-        });
+        console.log('Resposta do servidor:', result);
         
-        // Adicionar o produto ao banco de dados
-        const systemProduct = {
-          ...importedProduct,
-          id: fullId
-        };
-        
-        try {
-          console.log('Enviando produto para o banco de dados:', {
-            id: systemProduct.id,
-            title: systemProduct.title
-          });
-          
-          const response = await axios.post('http://localhost:3000/products', systemProduct);
-          
-          if (!response || !response.data) {
-            throw new Error('Resposta inválida do banco de dados');
-          }
-          
-          console.log('Produto salvo com sucesso:', {
-            id: systemProduct.id,
-            responseId: response.data?.id,
-            status: response.status
-          });
-          
-          // Adicionar ao conjunto de produtos importados
-          this.importedProducts.add(normalizedProduct.id);
-          
-          return res.status(200).json({
+        if (result && result.id) {
+          console.log('Produto importado com sucesso:', result);
+          return res.status(201).json({
             success: true,
             message: 'Produto importado com sucesso',
-            product: response.data
+            productId: result.id,
+            product: result
           });
-        } catch (dbError) {
-          console.error('Erro ao salvar produto no banco:', {
-            error: dbError.message,
-            product: systemProduct.id,
-            status: dbError.response?.status,
-            data: dbError.response?.data,
-            systemProduct
-          });
-          
-          return res.status(500).json({
-            success: false,
-            message: `Erro ao salvar produto: ${dbError.message}`,
-            details: {
-              error: dbError.message,
-              data: dbError.response?.data,
-              systemProduct
-            }
-          });
+        } else {
+          throw new Error('Falha ao importar produto');
         }
       } catch (error) {
-        console.error('Erro ao processar importação:', {
-          error: error.message,
-          stack: error.stack,
-          product: req.body?.id
-        });
-        
-        return res.status(500).json({
+        console.error('Erro ao importar produto:', error.message);
+        res.status(500).json({
           success: false,
-          message: `Erro ao importar produto: ${error.message}`,
-          details: error.stack
+          message: `Erro ao importar produto: ${error.message}`
         });
       }
     });
@@ -786,6 +1157,68 @@ class ScraperController {
           message: `Erro ao executar importação automática: ${error.message}`
         });
       }
+    });
+
+    // Rota para iniciar importação de todos os produtos
+    router.post('/scraper/import-all-products', async (req, res) => {
+      try {
+        // Verificar se já está em andamento
+        if (this.importProgress.isRunning) {
+          return res.status(409).json({
+            success: false,
+            message: 'Importação em massa já está em andamento',
+            progress: this.getImportAllStatus()
+          });
+        }
+        
+        // Obter parâmetros da requisição
+        const { batchSize = 20, delayBetweenBatches = 3000 } = req.body;
+        
+        // Iniciar a importação em um processo separado para não bloquear a resposta
+        res.status(202).json({
+          success: true,
+          message: 'Importação em massa iniciada',
+          progress: this.getImportAllStatus()
+        });
+        
+        // Iniciar o processo de importação em massa
+        this.importAllProducts(batchSize, delayBetweenBatches).catch(error => {
+          console.error('Erro na importação em massa:', error);
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: `Erro ao iniciar importação em massa: ${error.message}`
+        });
+      }
+    });
+
+    // Rota para obter status da importação em massa
+    router.get('/scraper/import-all-products/status', (req, res) => {
+      res.json({
+        success: true,
+        progress: this.getImportAllStatus()
+      });
+    });
+
+    // Rota para cancelar importação em massa
+    router.post('/scraper/import-all-products/cancel', (req, res) => {
+      if (!this.importProgress.isRunning) {
+        return res.status(400).json({
+          success: false,
+          message: 'Não há importação em massa em andamento'
+        });
+      }
+      
+      this.importProgress.isRunning = false;
+      this.importProgress.endTime = new Date();
+      this.importProgress.status = 'canceled';
+      
+      res.json({
+        success: true,
+        message: 'Importação em massa cancelada',
+        progress: this.getImportAllStatus()
+      });
     });
   }
 }

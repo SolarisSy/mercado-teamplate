@@ -3,7 +3,60 @@
  */
 
 import { Product } from '../typings';
-import { getLocalImageUrl } from './imageUtils';
+
+// Constantes para fallbacks
+const DEFAULT_PLACEHOLDER = '/img/placeholder-product.jpg';
+
+/**
+ * Verifica se uma URL é de apoioentrega.vteximg.com.br
+ * Esta função foi criada para centralizar a lógica de detecção
+ */
+function isApoioEntregaImageUrl(url: string): boolean {
+  return Boolean(url && typeof url === 'string' && url.includes('apoioentrega.vteximg.com.br'));
+}
+
+/**
+ * Obtém a URL local de uma imagem
+ * @param url URL original da imagem
+ * @param title Título do produto (para fallback)
+ * @param category Categoria do produto (para fallback)
+ * @returns URL local da imagem ou placeholder
+ */
+export function getLocalImageUrl(url: string, title?: string, category?: string): string {
+  // Se não tiver URL, tentar gerar uma com base no título e categoria
+  if (!url) {
+    if (title && category) {
+      return `/img/products/${category.toLowerCase()}/${title.toLowerCase().replace(/\s+/g, '-')}.jpg`;
+    }
+    return DEFAULT_PLACEHOLDER;
+  }
+  
+  // REGRA PRINCIPAL: PRESERVAR URLS DE APOIOENTREGA.VTEXIMG.COM.BR
+  if (isApoioEntregaImageUrl(url)) {
+    // Tentar usar HTTP se a URL não tem protocolo
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `http://${url}`;
+    }
+    
+    // Remover parâmetros desnecessários que podem causar problemas
+    const cleanUrl = url.split('?')[0];
+    
+    return cleanUrl;
+  }
+  
+  // Se for uma URL externa, retornar como está
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  // Se for um caminho relativo, adicionar o prefixo
+  if (url.startsWith('/')) {
+    return url;
+  }
+  
+  // Caso contrário, assumir que é um caminho relativo sem /
+  return `/${url}`;
+}
 
 /**
  * Obtém a URL da imagem principal de um produto
@@ -12,7 +65,7 @@ import { getLocalImageUrl } from './imageUtils';
  */
 export function getProductMainImage(product: Product): string {
   // Se não tiver produto, retornar placeholder
-  if (!product) return '/img/placeholder-product.jpg';
+  if (!product) return DEFAULT_PLACEHOLDER;
   
   // Tentar usar a imagem principal
   if (product.image) {
@@ -25,7 +78,7 @@ export function getProductMainImage(product: Product): string {
   }
   
   // Fallback para placeholder
-  return '/img/placeholder-product.jpg';
+  return DEFAULT_PLACEHOLDER;
 }
 
 /**
@@ -34,7 +87,7 @@ export function getProductMainImage(product: Product): string {
  * @returns URL da imagem da categoria ou placeholder
  */
 export function getCategoryImage(category: string): string {
-  if (!category) return '/img/placeholder-product.jpg';
+  if (!category) return DEFAULT_PLACEHOLDER;
   return getLocalImageUrl('', category, category);
 }
 
@@ -89,5 +142,5 @@ export const getProductMainImageLegacy = (product: Product): string => {
   }
   
   // Fallback para o campo image legado
-  return product.image || '/placeholder-image.jpg';
+  return product.image || DEFAULT_PLACEHOLDER;
 }; 

@@ -19,6 +19,35 @@ type AutoImportStatus = {
   lastCheck?: string;
 };
 
+type ImportAllProgress = {
+  isRunning: boolean;
+  total: number;
+  imported: number;
+  failed: number;
+  status: 'idle' | 'running' | 'completed' | 'failed' | 'canceled';
+  startTime: string | null;
+  endTime: string | null;
+  lastError: string | null;
+  currentBatch?: number;
+  batchSize?: number;
+  estimatedTotal?: number | string;
+  elapsed?: {
+    hours: number;
+    minutes: number;
+    seconds: number;
+    formatted: string;
+  };
+  estimate?: {
+    rate: string;
+    remaining: {
+      hours: number;
+      minutes: number;
+      seconds: number;
+      formatted: string;
+    };
+  };
+};
+
 // Constante para o caminho do placeholder
 const LOCAL_FALLBACK_IMAGE = '/img/placeholder-product.jpg';
 // URL de CDN confiável para fallback secundário
@@ -38,6 +67,19 @@ const ScraperProductsList = () => {
   const [importedProducts, setImportedProducts] = useState<string[]>([]);
   const [productCount, setProductCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Estado para importação em massa
+  const [importAllProgress, setImportAllProgress] = useState<ImportAllProgress>({
+    isRunning: false,
+    total: 0,
+    imported: 0,
+    failed: 0,
+    status: 'idle',
+    startTime: null,
+    endTime: null,
+    lastError: null
+  });
+  const [importAllLoading, setImportAllLoading] = useState(false);
 
   // Handler para lidar com erros de carregamento de imagens
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -54,11 +96,20 @@ const ScraperProductsList = () => {
     // Verificar o status da importação automática ao carregar o componente
     fetchAutoImportStatus();
     
+    // Verificar status da importação em massa
+    fetchImportAllStatus();
+    
     // Configurar um intervalo para verificar o status a cada 30 segundos
-    const statusInterval = setInterval(fetchAutoImportStatus, 30000);
+    const statusInterval = setInterval(() => {
+      fetchAutoImportStatus();
+      // Se a importação em massa estiver em andamento, verificar também seu status
+      if (importAllProgress.isRunning) {
+        fetchImportAllStatus();
+      }
+    }, 30000);
     
     return () => clearInterval(statusInterval);
-  }, []);
+  }, [importAllProgress.isRunning]);
 
   const fetchAutoImportStatus = async () => {
     try {
@@ -256,8 +307,205 @@ const ScraperProductsList = () => {
     }
   }, [setProductCount, setImportedProducts]);
 
+  // Funções para a importação em massa
+  const fetchImportAllStatus = async () => {
+    try {
+      const response = await axios.get('http://localhost:3000/scraper/import-all-products/status');
+      if (response.data && response.data.success) {
+        setImportAllProgress(response.data.progress);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar status da importação em massa:', error);
+    }
+  };
+
+  const startImportAllProducts = async () => {
+    try {
+      setImportAllLoading(true);
+      // Configurações padrão
+      const config = {
+        batchSize: 20,
+        delayBetweenBatches: 3000
+      };
+      
+      const response = await axios.post('http://localhost:3000/scraper/import-all-products', config);
+      
+      if (response.data && response.data.success) {
+        toast.success('Importação em massa iniciada com sucesso!');
+        setImportAllProgress(response.data.progress);
+        // Iniciar verificação contínua do status
+        const statusCheckInterval = setInterval(async () => {
+          if (importAllProgress.isRunning) {
+            await fetchImportAllStatus();
+          } else {
+            clearInterval(statusCheckInterval);
+          }
+        }, 5000);
+      }
+    } catch (error: any) {
+      console.error('Erro ao iniciar importação em massa:', error);
+      toast.error(`Erro ao iniciar importação: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setImportAllLoading(false);
+    }
+  };
+
+  const cancelImportAllProducts = async () => {
+    try {
+      setImportAllLoading(true);
+      const response = await axios.post('http://localhost:3000/scraper/import-all-products/cancel');
+      
+      if (response.data && response.data.success) {
+        toast.success('Importação em massa cancelada com sucesso!');
+        setImportAllProgress(response.data.progress);
+      }
+    } catch (error: any) {
+      console.error('Erro ao cancelar importação em massa:', error);
+      toast.error(`Erro ao cancelar importação: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setImportAllLoading(false);
+    }
+  };
+
+  // Renderizar a barra de progresso
+  const renderProgressBar = (current: number, total: number | string) => {
+    // Se o total é infinito ou desconhecido
+    if (total === '∞' || total === Infinity) {
+      return (
+        <div className="w-full bg-gray-200 rounded-full h-4 mt-2">
+          <div 
+            className="bg-blue-600 h-4 rounded-full text-xs text-white flex items-center justify-center"
+            style={{ width: '100%' }}
+          >
+            {current} produtos importados
+          </div>
+        </div>
+      );
+    }
+    
+    // Se temos um total definido
+    const totalNum = typeof total === 'string' ? parseInt(total, 10) : total;
+    if (isNaN(totalNum)) return null;
+    
+    const percentage = Math.min(100, Math.round((current / totalNum) * 100));
+    
+    return (
+      <div className="w-full bg-gray-200 rounded-full h-4 mt-2">
+        <div 
+          className="bg-blue-600 h-4 rounded-full text-xs text-white flex items-center justify-center"
+          style={{ width: `${percentage}%` }}
+        >
+          {percentage}% ({current}/{totalNum})
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="mt-8">
+      {/* Painel de importação em massa */}
+      <div className="mb-8 p-4 bg-gray-50 border rounded-lg">
+        <h2 className="text-xl font-bold mb-4">Importação em Massa</h2>
+        
+        <div className="flex flex-col">
+          <div className="flex flex-wrap items-center justify-between mb-4">
+            <div className="space-y-2">
+              <p className="flex items-center">
+                Status: 
+                <span className={`ml-2 px-2 py-1 rounded text-sm ${
+                  importAllProgress.status === 'running' 
+                    ? 'bg-blue-100 text-blue-800' 
+                    : importAllProgress.status === 'completed'
+                    ? 'bg-green-100 text-green-800'
+                    : importAllProgress.status === 'failed'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {importAllProgress.status === 'running' 
+                    ? 'Em andamento' 
+                    : importAllProgress.status === 'completed'
+                    ? 'Concluída'
+                    : importAllProgress.status === 'failed'
+                    ? 'Falhou'
+                    : importAllProgress.status === 'canceled'
+                    ? 'Cancelada'
+                    : 'Inativa'}
+                </span>
+              </p>
+              
+              {importAllProgress.isRunning && (
+                <>
+                  <p>Lote atual: <span className="font-medium">{importAllProgress.currentBatch || 1}</span></p>
+                  <p>Produtos encontrados: <span className="font-medium">{importAllProgress.total}</span></p>
+                  <p>Produtos importados: <span className="font-medium">{importAllProgress.imported}</span></p>
+                  <p>Falhas: <span className="font-medium">{importAllProgress.failed}</span></p>
+                  
+                  {importAllProgress.elapsed && (
+                    <p>Tempo decorrido: <span className="font-medium">{importAllProgress.elapsed.formatted}</span></p>
+                  )}
+                  
+                  {importAllProgress.estimate && (
+                    <>
+                      <p>Taxa de importação: <span className="font-medium">{importAllProgress.estimate.rate} produtos/segundo</span></p>
+                      <p>Tempo restante estimado: <span className="font-medium">{importAllProgress.estimate.remaining.formatted}</span></p>
+                    </>
+                  )}
+                </>
+              )}
+              
+              {importAllProgress.lastError && (
+                <p className="text-red-600">Último erro: {importAllProgress.lastError}</p>
+              )}
+            </div>
+            
+            <div className="flex space-x-3">
+              {!importAllProgress.isRunning ? (
+                <button 
+                  onClick={startImportAllProducts}
+                  disabled={importAllLoading || autoImportStatus.isRunning}
+                  className={`py-2 px-4 rounded font-medium ${
+                    importAllLoading || autoImportStatus.isRunning
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                  }`}
+                >
+                  {importAllLoading ? 'Processando...' : 'Importar Todos os Produtos'}
+                </button>
+              ) : (
+                <button 
+                  onClick={cancelImportAllProducts}
+                  disabled={importAllLoading}
+                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded"
+                >
+                  {importAllLoading ? 'Processando...' : 'Cancelar Importação'}
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* Barra de progresso */}
+          {importAllProgress.isRunning && renderProgressBar(
+            importAllProgress.imported,
+            importAllProgress.estimatedTotal || importAllProgress.total || '∞'
+          )}
+          
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  A importação em massa busca e importa todos os produtos disponíveis na API. Este processo pode levar muito tempo dependendo da quantidade de produtos.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Painel de status da importação automática */}
       <div className="mb-8 p-4 bg-gray-50 border rounded-lg">
         <h2 className="text-xl font-bold mb-4">Importação Automática</h2>
@@ -277,9 +525,11 @@ const ScraperProductsList = () => {
           <div className="flex space-x-3">
             <button 
               onClick={toggleAutoImport}
-              disabled={statusLoading}
+              disabled={statusLoading || importAllProgress.isRunning}
               className={`py-2 px-4 rounded font-medium ${
-                autoImportStatus.isRunning 
+                statusLoading || importAllProgress.isRunning
+                ? 'bg-gray-400 cursor-not-allowed'
+                : autoImportStatus.isRunning 
                 ? 'bg-red-600 hover:bg-red-700 text-white'
                 : 'bg-green-600 hover:bg-green-700 text-white'
               }`}
@@ -293,8 +543,12 @@ const ScraperProductsList = () => {
             
             <button 
               onClick={runAutoImportNow}
-              disabled={statusLoading}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+              disabled={statusLoading || importAllProgress.isRunning}
+              className={`${
+                statusLoading || importAllProgress.isRunning
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-700 text-white'
+              } font-medium py-2 px-4 rounded`}
             >
               Importar Agora
             </button>

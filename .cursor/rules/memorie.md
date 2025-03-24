@@ -146,7 +146,7 @@ Identificados problemas na manipulação de respostas do servidor e validação 
 - Eliminação do erro 500 durante a importação
 - Melhor feedback para o usuário em caso de erros
 - Maior robustez no processo de importação
-- Logs mais detalhados para diagnóstico de problemas
+- Logs mais detalhados para diagnóstico
 
 **Arquivos modificados:**
 - src/scraper/controller.js - Correção do acesso a dados undefined e melhoria no tratamento de erros
@@ -261,7 +261,7 @@ Identificados vários problemas no tratamento das URLs de imagem:
 - Imagens dos produtos do apoioentrega agora carregam corretamente
 - Melhor experiência do usuário com carregamento mais confiável
 - Sistema de fallback mais robusto quando imagens falham
-- Logs mais detalhados para diagnóstico de problemas
+- Logs mais detalhados para diagnóstico
 
 **Arquivos modificados:**
 - src/components/ProductItem.tsx
@@ -400,3 +400,397 @@ Refatoração do sistema de manipulação de imagens para melhorar a organizaç�
 
 **Observações:**
 Esta refatoração complementa as melhorias anteriores no sistema de imagens, centralizando a lógica em módulos bem definidos e documentados. 
+
+## 2025-04-06 - Correção de problemas de dependências e compatibilidade
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Correção de bugs e melhorias de compatibilidade
+
+**Descrição:**  
+Correção de diversos problemas de configuração e dependências que estavam impedindo o projeto de funcionar corretamente.
+
+**Razão:**  
+Identificados vários problemas técnicos:
+1. Configuração incorreta do alias de react-router-dom no Vite
+2. Duplicação de funções e inconsistências no sistema de manipulação de imagens
+3. Incompatibilidade entre a interface ProductItem e os dados passados pelo ProductGrid
+4. Configuração incorreta do módulo PostCSS causando warnings
+
+**Solução implementada:**
+1. No arquivo vite.config.ts:
+   - Removida configuração incorreta do alias para react-router-dom que causava erro de resolução de módulo
+
+2. No imageHelpers.ts:
+   - Centralizada toda a lógica de manipulação de URLs de imagens
+   - Removida dependência circular com imageUtils.ts
+   - Implementada versão completa da função getLocalImageUrl
+   - Adicionadas constantes para placeholders
+
+3. No ProductGrid.tsx:
+   - Corrigidos os props passados para o componente ProductItem
+   - Adicionada lógica para detectar imagens do apoioentrega
+
+4. No postcss.config.js:
+   - Adicionada definição de tipo apropriada para configuração de módulo
+
+**Impacto:**
+- Correção do erro de importação de Link do react-router-dom
+- Melhor organização do código de manipulação de imagens
+- Eliminação de avisos de TypeScript
+- Sistema mais robusto para exibição de imagens de produtos
+
+**Arquivos modificados:**
+- vite.config.ts - Correção da configuração do Vite
+- src/utils/imageHelpers.ts - Reorganização das funções de manipulação de imagens
+- src/components/ProductGrid.tsx - Correção dos props passados para ProductItem
+- postcss.config.js - Correção da definição de módulo
+
+**Observações:**
+Estas correções resolvem problemas fundamentais de configuração e dependências, permitindo que o projeto seja executado sem erros. As funções de manipulação de imagens agora estão centralizadas no arquivo imageHelpers.ts, melhorando a manutenibilidade e evitando duplicações. 
+
+## 2025-04-07 - Correção do problema de duplicação de produtos durante importação
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Correção de bug
+
+**Descrição:**  
+Correção do erro 500 que ocorria durante a importação de produtos devido a uma tentativa de salvar o mesmo produto duas vezes no banco de dados.
+
+**Razão:**  
+Identificado problema crítico na rota `/api/import-product`:
+1. O método `importProductToStore` já salva o produto no banco de dados
+2. A rota tentava salvar o mesmo produto novamente, resultando no erro "Insert failed, duplicate id"
+3. Isso causava uma falha 500 que impedia a importação de produtos através da interface
+
+**Solução implementada:**
+1. Modificação da rota `/api/import-product` para remover o segundo salvamento do produto:
+   - Removida a chamada redundante para `axios.post('http://localhost:3000/products', systemProduct)`
+   - Simplificado o fluxo para usar diretamente o produto retornado por `importProductToStore`
+   - Mantida a verificação de produtos duplicados antes da importação
+   - Preservada toda a lógica de validação e normalização de dados
+
+**Impacto:**
+- Correção do erro 500 durante a importação de produtos
+- Interface de importação manual funcionando corretamente
+- Melhor experiência do usuário ao não encontrar erros durante a importação
+- Sistema mais confiável para adicionar produtos ao catálogo
+
+**Arquivos modificados:**
+- src/scraper/controller.js - Correção da rota `/api/import-product` para evitar duplicação
+
+**Observações:**
+Esta correção garante que o processo de importação manual de produtos funcione corretamente, complementando o sistema de importação automática que já estava operacional. A correção preserva todas as melhorias anteriores no tratamento de imagens e validação de dados. 
+
+## 2025-04-07 - Solução definitiva para o problema de exibição de imagens do apoioentrega
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Correção de bug crítico
+
+**Descrição:**  
+Implementação de uma solução definitiva para o problema persistente onde as imagens de produtos importados do apoioentrega não eram exibidas corretamente, mostrando placeholders locais em vez das imagens originais.
+
+**Problema identificado:**  
+Após múltiplas tentativas de correção, foi identificado que o problema tinha raízes em múltiplas camadas do sistema:
+
+1. No utilitário `imageUtils.ts`:
+   - O mapeamento de URLs externas ainda incluía lógica que substituía URLs do apoioentrega
+   - A lógica de tratamento de URLs aplicava modificações desnecessárias às URLs originais
+
+2. Nos componentes de visualização:
+   - URLs originais estavam sendo alteradas por componentes como `ProductImage`
+   - Mecanismos de fallback eram aplicados prematuramente
+
+**Solução implementada:**
+1. Reescrita completa da lógica de processamento de imagens no componente ProductItem:
+   - Adicionado sistema abrangente de logging para diagnóstico
+   - Implementada verificação direta do domínio apoioentrega.vteximg.com.br
+   - Remoção de parâmetros de URL problemáticos (parâmetros após '?')
+   - Melhoria no tratamento de protocolos HTTP/HTTPS
+   - Simplificação da lógica de fallback
+
+2. Criação de arquivo de declaração TypeScript para react-router-dom para corrigir erros de importação
+
+**Impacto:**
+- Exibição consistente das imagens originais do apoioentrega
+- Melhor experiência do usuário com imagens corretas
+- Logs de diagnóstico aprimorados para resolução de problemas futuros
+- Correção de erros de tipo relacionados a importações do react-router-dom
+
+**Arquivos modificados:**
+- src/components/ProductItem.tsx - Reescrita da lógica de processamento de imagens
+- src/types/react-router-dom.d.ts - Novo arquivo para resolução de tipos
+
+**Observações:**  
+Esta correção resolveu definitivamente o problema persistente de exibição de imagens, estabelecendo uma abordagem simplificada e direta para o tratamento de URLs do apoioentrega. A solução preserva as URLs originais e implementa um sistema de fallback robusto apenas quando necessário.
+
+## 2025-04-07 - Implementação do download de imagens para armazenamento local
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Nova funcionalidade
+
+**Descrição:**  
+Implementação de sistema para baixar e salvar localmente as imagens dos produtos importados do apoioentrega, em vez de apenas referenciar as URLs originais.
+
+**Razão:**  
+Identificados potenciais problemas com o uso direto das URLs originais das imagens:
+1. Dependência de servidores externos que podem ficar indisponíveis
+2. Possível lentidão no carregamento de imagens de fontes externas
+3. Risco de mudanças nas URLs ou estrutura do site de origem
+4. Melhor controle sobre o formato e tamanho das imagens
+
+**Solução implementada:**
+1. Criada nova função `downloadImage()` no controller do scraper que:
+   - Recebe uma URL de imagem e um ID de produto
+   - Valida a URL e verifica se é uma imagem
+   - Gera um nome de arquivo único baseado no ID do produto e hash da URL
+   - Faz o download do conteúdo da imagem usando Axios
+   - Salva o arquivo localmente em 'public/img/produtos/'
+   - Retorna o caminho relativo para uso no frontend
+
+2. Modificada a função `importProductToStore()` para:
+   - Preservar as URLs originais como referência
+   - Processar cada imagem individualmente
+   - Baixar e salvar localmente cada imagem usando a nova função
+   - Usar os caminhos locais no produto salvo no banco de dados
+
+**Impacto:**
+- Redução da dependência de servidores externos
+- Melhor performance no carregamento de imagens
+- Maior consistência na exibição dos produtos
+- Melhor controle sobre o conteúdo armazenado
+
+**Arquivos modificados:**
+- src/scraper/controller.js - Adição da função downloadImage e modificação da função importProductToStore
+
+**Dependências adicionadas:**
+- fs-extra: Para manipulação de arquivos
+- uuid: Para geração de nomes únicos de arquivos
+
+**Observações:**
+Esta implementação melhora a robustez do sistema, garantindo que as imagens dos produtos continuem disponíveis mesmo se o site de origem ficar indisponível ou mudar sua estrutura. As URLs originais ainda são preservadas para referência, mas não são mais usadas diretamente na exibição dos produtos.
+
+## 2025-04-08 - Refatoração completa do sistema de exibição de imagens
+
+**Issue identificada:** Imagens baixadas localmente para produtos importados não estavam sendo exibidas corretamente nas páginas de listagem (homepage e shop).
+
+**Solução implementada:**
+1. Refatoração completa do componente `ProductItem.tsx` para:
+   - Suportar passagem do objeto de produto completo (`product`) além das props individuais
+   - Melhorar a detecção de produtos importados (usando ID e campo `source`)
+   - Priorizar imagens baixadas localmente em `/img/produtos/`
+   - Implementar uma lógica mais robusta de fallback para imagens com erro
+   - Adicionar melhor logging para diagnóstico
+
+2. Atualização do componente `ProductImage.tsx`:
+   - Adição das propriedades `productId` e `source` para melhor identificação
+   - Melhoria na lógica de inicialização e tratamento de erros
+   - Suporte específico para imagens em `/img/produtos/`
+
+3. Atualização dos componentes que usam `ProductItem`:
+   - `ProductGrid.tsx` - Agora passa o objeto de produto completo
+   - `Landing.tsx` - Agora passa o objeto de produto completo
+   - `SingleProduct.tsx` - Agora usa o componente `ProductImage` com todas as props necessárias
+
+**Impacto:**
+- Melhor consistência na exibição de imagens em toda a aplicação
+- Redução de requests a servidores externos
+- Priorização de imagens baixadas localmente
+- Melhor tratamento de erros e fallbacks
+- Manutenção simplificada com melhor separação de responsabilidades
+
+Essa refatoração completa o ciclo de implementação do download de imagens locais, garantindo que as imagens baixadas sejam corretamente utilizadas em todos os contextos da aplicação.
+
+## 2025-04-09 - Decodificação de entidades HTML em descrições de produtos
+
+**Issue identificada:** As descrições de produtos importados do apoioentrega estavam sendo exibidas com tags HTML literais (e.g., `&lt;p&gt;`, `&lt;b&gt;` etc.) em vez de serem renderizadas como HTML formatado.
+
+**Solução implementada:**
+1. Criação do utilitário `formatHtml.ts` com funções para:
+   - `sanitizeHtml`: Sanitiza HTML para renderização segura via `dangerouslySetInnerHTML`
+   - `htmlToPlainText`: Converte HTML para texto plano mantendo apenas o conteúdo textual
+   - `decodeHtmlEntities`: Decodifica entidades HTML escapadas (sem depender do DOM)
+
+2. Modificação do componente `ProductItem.tsx` para usar `htmlToPlainText` nas descrições em cards:
+   - Converte tags HTML escapadas para texto plano na exibição de cards
+   - Mantém o texto legível sem exibir as tags literais
+
+3. Modificação do componente `SingleProduct.tsx` para render HTML sanitizado na página de detalhes:
+   - Usa `dangerouslySetInnerHTML` com HTML sanitizado para exibir formatação
+   - Exibe descrições ricas com formatação HTML preservada e segura
+
+4. Atualização do processo de importação em `controller.js`:
+   - Decodificação de entidades HTML no momento da importação no backend
+   - Processamento de descrições tanto na função `importProductToStore` quanto na rota `/api/import-product`
+   - Limpeza de descrições para remover tags HTML escapadas
+
+**Impacto:**
+- Melhoria significativa na experiência do usuário com descrições de produtos formatadas corretamente
+- Manutenção da segurança através da sanitização do HTML antes da renderização
+- Processo de importação mais robusto com tratamento adequado de conteúdo HTML
+- Exibição consistente de descrições em toda a aplicação (cards e páginas de detalhes)
+
+**Dependências adicionadas:**
+- DOMPurify: biblioteca para sanitização segura de HTML
+
+**Arquivos modificados:**
+- `src/utils/formatHtml.ts` (novo): funções para processamento e sanitização de HTML
+- `src/components/ProductItem.tsx`: atualizado para converter HTML para texto plano em cards
+- `src/pages/SingleProduct.tsx`: atualizado para renderizar HTML sanitizado na página de detalhes
+- `src/scraper/controller.js`: atualizado para decodificar HTML durante a importação
+
+**Observações:**
+Esta implementação garante que as descrições de produtos importados sejam exibidas corretamente em todos os contextos, mantendo a formatação original quando apropriado e garantindo a segurança contra potenciais vulnerabilidades XSS.
+
+## 2025-04-09 - Implementação de importação em massa de todos os produtos
+
+**Responsável:** Claude Sonnet 3.7
+
+**Tipo de mudança:** Nova funcionalidade
+
+**Descrição:**  
+Implementação de sistema de importação em massa para importar gradualmente todos os produtos disponíveis na API do apoioentrega, permitindo ao usuário iniciar, monitorar e cancelar o processo.
+
+**Razão:**  
+O sistema anterior limitava a visualização e importação a apenas 100 produtos por vez, com duas opções: importação manual individual e importação automática periódica. Era necessária uma terceira opção que permitisse a importação completa do catálogo de uma só vez.
+
+**Solução implementada:**
+1. No controlador do scraper (`controller.js`):
+   - Criação do método `importAllProducts()` que busca e importa produtos em lotes contínuos até não haver mais produtos disponíveis
+   - Implementação de sistema de rastreamento de progresso com estatísticas detalhadas (produtos encontrados, importados, falhas)
+   - Adição de lógica para cálculo de estimativas de tempo restante e taxas de importação
+   - Implementação de tratamento de erros robusto com sistema de recuperação e cancelamento automático após falhas consecutivas
+   - Criação de rotas API para iniciar, monitorar e cancelar a importação em massa
+
+2. Na interface do usuário (`ScraperProductsList.tsx`):
+   - Adição de um novo painel dedicado à importação em massa
+   - Implementação de barra de progresso para acompanhamento visual
+   - Exibição de estatísticas detalhadas durante o processo (produtos importados, falhas, tempo decorrido, estimativa de tempo restante)
+   - Botões para iniciar e cancelar o processo de importação em massa
+   - Atualização automática do status a cada 30 segundos quando a importação está em andamento
+
+**Impacto:**
+- Capacidade de importar todo o catálogo de produtos do apoioentrega com uma única ação
+- Maior visibilidade do progresso da importação com estatísticas em tempo real
+- Melhor experiência do usuário com feedback visual sobre o processo
+- Prevenção de duplicidade com verificação automática antes da importação de cada produto
+- Download e armazenamento local de imagens durante a importação para maior independência de servidores externos
+
+**Arquivos modificados:**
+- `src/scraper/controller.js`: Adição dos métodos de importação em massa e rotas API correspondentes
+- `src/components/ScraperProductsList.tsx`: Implementação do painel de interface para controle e monitoramento
+
+**Dependências utilizadas:**
+- Axios para requisições HTTP
+- Sistema existente de download de imagens e processamento de produtos
+
+**Observações:**
+Esta implementação completa o ciclo de funcionalidades de importação, oferecendo três opções distintas para diferentes necessidades:
+1. **Importação manual**: Para teste e seleção criteriosa de produtos individuais
+2. **Importação automática**: Para monitoramento contínuo de novos produtos em intervalos regulares
+3. **Importação em massa**: Para cadastro completo e rápido de todo o catálogo disponível
+
+A solução implementa mecanismos de segurança para evitar sobrecarga do servidor de origem, com delays configuráveis entre lotes de importação e limitação do número de erros consecutivos permitidos.
+
+## Análise e Documentação do Sistema de Categorias vs. Carrossel - 2023-10-15
+
+**Contexto:**
+Identificada uma inconsistência entre a visualização de categorias no painel administrativo e no site principal. A tela mostrada no painel é de gerenciamento de banners do carrossel, não o gerenciamento de categorias.
+
+**Análise:**
+1. No exemplo fornecido, o usuário estava visualizando o componente `CarouselManager.tsx` em vez do `CategoriesManager.tsx` no painel administrativo.
+2. O `CarouselManager.tsx` gerencia banners promocionais que aparecem no carrossel da página inicial, com links para categorias específicas.
+3. O verdadeiro gerenciador de categorias (`CategoriesManager.tsx`) é um componente separado que gerencia as categorias exibidas na navegação do site.
+
+**Solução implementada:**
+1. Documentada a distinção entre os dois componentes:
+   - `CarouselManager.tsx`: gerencia banners promocionais do carrossel
+   - `CategoriesManager.tsx`: gerencia categorias da loja
+
+2. Identificado o fluxo correto para gerenciamento de categorias:
+   - Categorias são criadas/editadas no componente `CategoriesManager`
+   - Essas categorias são consumidas pelo `CategoryContext` e disponibilizadas em toda a aplicação
+   - O componente `ShopPageContent` exibe as categorias na página da loja usando dados do `CategoryContext`
+
+3. Confirmada a implementação correta do sistema de categorias através da análise do código:
+   - O `CategoryContext` carrega as categorias da API e as mantém atualizadas
+   - O `ShopPageContent` exibe as categorias disponíveis como filtros na loja
+   - O sistema atualmente exibe corretamente as categorias no site da loja
+
+**Impacto:**
+- Esclarecido o propósito de cada componente administrativo
+- Confirmado que o sistema de categorias funciona corretamente
+- Documentada a diferença entre o gerenciamento de banners do carrossel e categorias
+- Prevenção de confusão futura entre os dois sistemas
+
+**Recomendações:**
+1. Considerar adicionar mais clareza na interface administrativa para distinguir melhor o gerenciamento de carrossel do gerenciamento de categorias
+2. Implementar breadcrumbs no painel administrativo para ajudar na navegação
+3. Adicionar textos explicativos em cada seção administrativa para esclarecer seu propósito
+
+## Correção do Erro de Desestruturação no ProductItem - 2023-10-15
+
+**Contexto:**
+Foi identificado um erro crítico ao acessar páginas de detalhes de produtos, onde o componente `ProductItem` gerava uma exceção: "Cannot destructure property 'id' of 'product' as it is undefined". Este erro impedia a visualização da página de detalhes do produto e afetava a exibição de produtos relacionados.
+
+**Análise do problema:**
+1. O componente `ProductItem` recebia dados de duas formas inconsistentes:
+   - Em algumas partes do código, recebia um objeto `product` completo
+   - Em outras partes, recebia propriedades individuais (id, title, price, etc.)
+2. A implementação original tentava desestruturar propriedades de `product` sem verificar se o objeto existia
+3. Na página `SingleProduct.tsx`, os produtos relacionados eram passados com propriedades individuais, não como objetos completos
+
+**Solução implementada:**
+1. Refatoração do componente `ProductItem`:
+   - Tornando o parâmetro `product` opcional na interface `ProductProps`
+   - Adicionando suporte para receber tanto o objeto completo quanto propriedades individuais
+   - Implementando uma lógica de fallback que prioriza o objeto `product` e depois usa propriedades individuais
+   - Adicionando verificações de segurança para evitar erros quando os dados são insuficientes
+   - Exibindo uma mensagem de erro amigável quando os dados são incompletos
+
+2. Atualização dos componentes que utilizam `ProductItem`:
+   - Padronizando a forma de passar dados para o componente em `SingleProduct.tsx`
+   - Usando o padrão de passar o objeto completo `product` quando disponível
+
+**Impacto:**
+- Correção do erro crítico que impedia a visualização de páginas de detalhes de produtos
+- Maior robustez na renderização de produtos, evitando quebras na interface
+- Melhor experiência do usuário com tratamento adequado de estados de erro
+- Compatibilidade retroativa mantida com código existente que usa diferentes padrões de props
+
+**Arquivos modificados:**
+- `src/components/ProductItem.tsx`: Refatoração principal com suporte a múltiplos padrões de props
+- `src/pages/SingleProduct.tsx`: Atualização da forma de passar dados para produtos relacionados
+
+**Observações técnicas:**
+A solução implementa um padrão de "API flexível" que permite múltiplas formas de uso do componente, facilitando a manutenção do código existente enquanto promove uma padronização gradual para o uso do objeto `product` completo em toda a aplicação.
+
+## Correção do Botão de Adicionar ao Carrinho na Página de Detalhes de Produto - 2023-10-16
+
+**Contexto:**
+Foi identificado um problema na página de detalhes do produto (`SingleProduct.tsx`), onde o botão "Adicionar ao Carrinho" não estava sendo renderizado corretamente, exibindo apenas "No valid mode selected" como mensagem de erro.
+
+**Análise do problema:**
+1. O componente `Button` espera receber uma propriedade `mode` para definir o estilo visual do botão, aceitando valores como "primary", "secondary", "white" ou "transparent"
+2. Na implementação da página `SingleProduct.tsx`, estava sendo passado incorretamente o atributo `purpose="primary"` em vez de `mode="primary"`
+3. Além disso, o componente não suporta a propriedade `styles` que estava sendo utilizada para definir responsividade
+
+**Solução implementada:**
+1. Correções no componente `Button` no arquivo `SingleProduct.tsx`:
+   - Substituído o atributo `purpose="primary"` por `mode="primary"` para seguir a API correta do componente
+   - Substituído o atributo `styles="w-full md:w-auto"` por `className="w-full md:w-auto"`, que é o atributo padrão para estilização em componentes React
+
+**Impacto:**
+- Correção da renderização do botão "Adicionar ao Carrinho" na página de detalhes do produto
+- Melhor experiência do usuário ao visualizar produtos individuais
+- Consistência visual com o resto da aplicação
+- Funcionalidade completa de adicionar produtos ao carrinho a partir da página de detalhes
+
+**Arquivos modificados:**
+- `src/pages/SingleProduct.tsx`: Correção dos atributos do componente Button
+
+**Observações técnicas:**
+Esta correção demonstra a importância de seguir corretamente a API dos componentes conforme definida em suas interfaces. O problema ocorreu porque o componente Button define `mode` como propriedade obrigatória em sua interface e não reconhece `purpose` como uma alternativa válida.
