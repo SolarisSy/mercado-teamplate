@@ -3,8 +3,35 @@ const cors = require('cors');
 const morgan = require('morgan');
 const fs = require('fs');
 const path = require('path');
-const { Low } = require('lowdb');
-const { JSONFile } = require('lowdb/node');
+// Suporte para diferentes versões do lowdb
+let Low, JSONFile;
+try {
+  // Tentar importar lowdb v6 (nova versão)
+  const lowdb = require('lowdb');
+  Low = lowdb.Low;
+  JSONFile = lowdb.JSONFile;
+} catch (error) {
+  try {
+    // Fallback para lowdb v1 (versão antiga)
+    Low = require('lowdb');
+    const FileSync = require('lowdb/adapters/FileSync');
+    // Criar um adaptador compatível com a interface esperada
+    JSONFile = function(file) {
+      this.adapter = new FileSync(file);
+      this.read = async function() {
+        this.data = this.adapter.read();
+        return this.data;
+      };
+      this.write = async function() {
+        return this.adapter.write(this.data);
+      };
+    };
+  } catch (err) {
+    console.error('Falha ao carregar lowdb. Erro:', err);
+    process.exit(1);
+  }
+}
+
 const ScraperController = require('./src/scraper/controller').default || require('./src/scraper/controller');
 
 // Configuração para minimizar uso de memória
@@ -21,7 +48,15 @@ class ProductionServer {
     this.scraperController = null;
     
     // Configurar log de erros
-    this.errorLogStream = fs.createWriteStream(path.join(__dirname, 'logs', 'error.log'), { flags: 'a' });
+    try {
+      if (!fs.existsSync(path.join(__dirname, 'logs'))) {
+        fs.mkdirSync(path.join(__dirname, 'logs'), { recursive: true });
+      }
+      this.errorLogStream = fs.createWriteStream(path.join(__dirname, 'logs', 'error.log'), { flags: 'a' });
+    } catch (error) {
+      console.error('Erro ao configurar logs:', error);
+      this.errorLogStream = { write: (msg) => console.error(msg) }; // fallback
+    }
     
     this.setupDatabase();
     this.setupMiddleware();
@@ -49,23 +84,68 @@ class ProductionServer {
       }
       
       // Inicializar o banco de dados
-      const adapter = new JSONFile(this.dbFile);
-      this.db = new Low(adapter);
-      
-      // Carregar os dados iniciais
-      this.db.read()
-        .then(() => {
-          console.log('Banco de dados carregado com sucesso.');
-          // Inicializar o controller após carregar o banco
-          this.initializeController();
-        })
-        .catch(err => {
-          console.error('Erro ao carregar o banco de dados:', err);
-          this.logError('DATABASE_LOAD_ERROR', err);
-        });
+      try {
+        const adapter = new JSONFile(this.dbFile);
+        this.db = new Low(adapter);
+        
+        // Carregar os dados iniciais
+        let loadPromise;
+        if (typeof this.db.read === 'function') {
+          loadPromise = this.db.read();
+        } else {
+          // Compatibilidade com lowdb v1
+          this.db.data = this.db.read();
+          loadPromise = Promise.resolve(this.db.data);
+        }
+        
+        loadPromise
+          .then(() => {
+            console.log('Banco de dados carregado com sucesso.');
+            // Para versões antigas do lowdb, garantir que this.db.data existe
+            if (!this.db.data) {
+              this.db.data = this.db.adapter ? this.db.adapter.read() : {};
+            }
+            // Inicializar o controller após carregar o banco
+            this.initializeController();
+          })
+          .catch(err => {
+            console.error('Erro ao carregar o banco de dados:', err);
+            this.logError('DATABASE_LOAD_ERROR', err);
+          });
+      } catch (error) {
+        console.error('Erro ao inicializar o banco de dados:', error);
+        this.logError('DATABASE_INIT_ERROR', error);
+        // Tentar método alternativo
+        this.tryLegacyDatabaseSetup();
+      }
     } catch (error) {
       console.error('Erro ao configurar o banco de dados:', error);
       this.logError('DATABASE_SETUP_ERROR', error);
+    }
+  }
+  
+  tryLegacyDatabaseSetup() {
+    console.log('Tentando método alternativo para configurar o banco de dados...');
+    try {
+      // Usar json-server para acessar o banco de dados
+      const jsonServer = require('json-server');
+      const router = jsonServer.router(this.dbFile);
+      this.db = {
+        data: router.db.getState(),
+        read: async () => {
+          this.db.data = router.db.getState();
+          return this.db.data;
+        },
+        write: async () => {
+          router.db.setState(this.db.data);
+          return router.db.write();
+        }
+      };
+      console.log('Banco de dados configurado usando json-server');
+      this.initializeController();
+    } catch (error) {
+      console.error('Falha ao configurar banco de dados usando método alternativo:', error);
+      this.logError('LEGACY_DATABASE_SETUP_ERROR', error);
     }
   }
   

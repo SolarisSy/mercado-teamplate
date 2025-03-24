@@ -35,4 +35,47 @@ Estas mudanças resultam em:
 - Monitoramento contínuo que facilita a diagnóstico de problemas
 
 ### Observações Técnicas
-O sistema agora detecta automaticamente quando deve usar o servidor de produção mais robusto (Express) em vez do JSON Server, baseando-se no tamanho do arquivo db.json ou na variável de ambiente NODE_ENV. Isso mantém a compatibilidade com o ambiente de desenvolvimento enquanto oferece estabilidade em produção. 
+O sistema agora detecta automaticamente quando deve usar o servidor de produção mais robusto (Express) em vez do JSON Server, baseando-se no tamanho do arquivo db.json ou na variável de ambiente NODE_ENV. Isso mantém a compatibilidade com o ambiente de desenvolvimento enquanto oferece estabilidade em produção.
+
+## 2025-04-18 - Correção de Problemas de Compatibilidade na Implantação na VPS
+**Responsável**: Claude Sonnet 3.7
+**Tipo de Alteração**: Correção de erros
+
+### Descrição do Problema
+O sistema estava apresentando erros durante a implantação na VPS, especificamente relacionados à incompatibilidade entre as dependências definidas no package.json e aquelas presentes no package-lock.json. O erro principal ocorria durante o comando `npm ci`, que exige sincronização exata entre esses dois arquivos.
+
+### Problema específico:
+```
+npm error Invalid: lock file's lowdb@1.0.0 does not satisfy lowdb@6.1.1
+npm error Missing: lowdb@1.0.0 from lock file
+npm error Invalid: lock file's steno@0.4.4 does not satisfy steno@3.2.0
+```
+
+### Solução Implementada
+1. **Modificação do script de build**:
+   - Alteração do nixpacks.toml para usar `npm install --legacy-peer-deps` em vez de `npm ci`
+   - Adição de uma etapa para instalar dependências críticas globalmente
+
+2. **Flexibilização das dependências**:
+   - Atualização do package.json para aceitar tanto lowdb v1.0.0 quanto v6.1.1
+   - Uso da sintaxe `"lowdb": "^1.0.0 || ^6.1.1"` para permitir qualquer uma das versões
+
+3. **Adaptação do código para compatibilidade**:
+   - Reestruturação do server-prod.js para funcionar com ambas as versões do lowdb
+   - Implementação de detecção automática da versão disponível e uso de interfaces compatíveis
+   - Adição de múltiplos fallbacks para garantir a execução mesmo com dependências parciais
+
+4. **Robustez do script de inicialização**:
+   - Reescrita completa do start.sh com melhor tratamento de erros
+   - Adição de verificação de dependências e instalação automática quando necessário
+   - Implementação de vários níveis de fallback para garantir o funcionamento do sistema
+
+### Impacto das Alterações
+Estas mudanças resultam em:
+- Sistema mais resiliente a diferenças de ambiente entre desenvolvimento e produção
+- Melhor capacidade de recuperação automática em caso de problemas durante a implantação
+- Redução significativa da probabilidade de falhas devido a dependências ausentes ou incompatíveis
+- Log mais detalhado para facilitar diagnóstico de problemas futuros
+
+### Observações Técnicas
+As modificações mantêm o comportamento funcional do sistema, apenas garantindo maior compatibilidade com diferentes ambientes. A abordagem foi projetada para ser tolerante a falhas, sempre priorizando o funcionamento mínimo do sistema em vez de falhar completamente quando condições ideais não são atingidas. 

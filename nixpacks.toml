@@ -1,8 +1,9 @@
 [phases.setup]
 aptPkgs = ["nginx", "curl", "procps", "findutils"]
+cmds = ["npm install -g lowdb json-server cors morgan"]
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm install --legacy-peer-deps"]
 
 [phases.build]
 cmds = ["npm run build"]

@@ -1,7 +1,52 @@
 #!/bin/bash
 
+# Função de log
+log() {
+  echo "[$(date)] - $1"
+}
+
+log "Iniciando script de inicialização..."
+
+# Verificar e instalar dependências necessárias
+install_deps() {
+  log "Verificando dependências necessárias..."
+  
+  # Lista de pacotes npm para verificar
+  npm_packages=("express" "cors" "morgan" "lowdb" "json-server")
+  missing_packages=()
+  
+  for pkg in "${npm_packages[@]}"; do
+    if ! npm list --depth=0 "$pkg" >/dev/null 2>&1; then
+      log "Dependência não encontrada: $pkg"
+      missing_packages+=("$pkg")
+    fi
+  done
+  
+  # Instalar pacotes faltantes
+  if [ ${#missing_packages[@]} -gt 0 ]; then
+    log "Instalando dependências faltantes: ${missing_packages[*]}"
+    npm install --no-save "${missing_packages[@]}" || {
+      log "AVISO: Falha ao instalar via npm. Tentando globalmente..."
+      npm install -g "${missing_packages[@]}" || {
+        log "ERRO: Falha ao instalar dependências. Tentando continuar mesmo assim."
+      }
+    }
+  fi
+  
+  # Instalar utilitários do sistema se necessário
+  if ! command -v bc &> /dev/null; then
+    log "Instalando bc..."
+    apt-get update && apt-get install -y bc || log "AVISO: Falha ao instalar bc"
+  fi
+}
+
 # Configurar o Nginx para servir os arquivos estáticos do frontend
-cat > /etc/nginx/sites-available/default << 'EOF'
+configure_nginx() {
+  log "Configurando Nginx..."
+  
+  mkdir -p /etc/nginx/sites-available/
+  
+  cat > /etc/nginx/sites-available/default << 'EOF'
 server {
     listen 80;
     server_name localhost;
@@ -32,31 +77,28 @@ server {
 }
 EOF
 
-# Iniciar o Nginx
-service nginx start
+  # Iniciar o Nginx
+  service nginx start || {
+    log "ERRO: Falha ao iniciar Nginx. Tentando continuar sem ele..."
+  }
+}
 
-# Verificar a localização atual
-echo "Diretório atual: $(pwd)"
-echo "Conteúdo do diretório:"
-ls -la
+# Verificar se os arquivos necessários existem ou criar versões padrão
+check_required_files() {
+  log "Verificando arquivos necessários..."
+  
+  # Verificar a localização atual
+  log "Diretório atual: $(pwd)"
+  log "Conteúdo do diretório:"
+  ls -la
+  
+  # Criar diretórios necessários
+  mkdir -p logs
 
-# Verificar se o arquivo db.json existe
-if [ ! -f "/app/db.json" ]; then
-    echo "ERRO: db.json não encontrado no diretório /app"
-    echo "Tentando localizar db.json:"
-    find / -name db.json -type f 2>/dev/null
-    
-    # Se não encontrar, copiar o db.json do diretório atual para /app caso exista
-    if [ -f "db.json" ]; then
-        echo "db.json encontrado no diretório atual, copiando para /app/db.json"
-        cp db.json /app/db.json
-    fi
-fi
-
-# Verificar novamente
-if [ ! -f "/app/db.json" ]; then
-    echo "ERRO: db.json ainda não encontrado. Criando um arquivo db.json básico."
-    cat > /app/db.json << 'EOF'
+  # Verificar se o arquivo db.json existe
+  if [ ! -f "db.json" ]; then
+    log "AVISO: db.json não encontrado. Criando versão básica..."
+    cat > db.json << 'EOF'
 {
   "products": [],
   "categories": [],
@@ -65,12 +107,12 @@ if [ ! -f "/app/db.json" ]; then
   "users": []
 }
 EOF
-fi
+  fi
 
-# Verificar se o arquivo routes.json existe
-if [ ! -f "/app/routes.json" ]; then
-    echo "ERRO: routes.json não encontrado. Criando um arquivo routes.json básico."
-    cat > /app/routes.json << 'EOF'
+  # Verificar se o arquivo routes.json existe
+  if [ ! -f "routes.json" ]; then
+    log "AVISO: routes.json não encontrado. Criando versão básica..."
+    cat > routes.json << 'EOF'
 {
   "/api/*": "/$1",
   "/categories": "/categories",
@@ -89,104 +131,26 @@ if [ ! -f "/app/routes.json" ]; then
   "/api/carousel/:id": "/carousel/:id"
 }
 EOF
-fi
+  fi
 
-# Criar versão CommonJS do server.js para caso o original falhe
-echo "Criando versão CommonJS do middleware..."
-cat > /app/server-commonjs.js << 'EOF'
-const jsonServer = require('json-server');
-const server = jsonServer.create();
-const router = jsonServer.router('db.json');
-const middlewares = jsonServer.defaults();
+  # Verificar se server-prod.js existe
+  if [ ! -f "server-prod.js" ]; then
+    log "AVISO: server-prod.js não encontrado. Tentando continuar sem ele..."
+  fi
+}
 
-// Adicionar timestamp automático
-module.exports = (req, res, next) => {
-  if (req.method === 'POST') {
-    req.body.createdAt = new Date().toISOString();
-    req.body.updatedAt = new Date().toISOString();
-  }
-  if (req.method === 'PUT' || req.method === 'PATCH') {
-    req.body.updatedAt = new Date().toISOString();
-  }
-  next();
-};
-EOF
-
-# Instalar dependências necessárias
-echo "Instalando dependências..."
-npm install -g json-server@0.17.4
-apt-get update && apt-get install -y bc curl procps
-
-# Criar script para executar a otimização do banco de dados diariamente
-cat > /app/optimize-db-cron.sh << 'EOF'
+# Iniciar o monitor para o servidor
+start_monitor() {
+  local SERVER_PID=$1
+  local IS_PRODUCTION=$2
+  
+  log "Iniciando script de monitoramento..."
+  
+  # Criar script de monitoramento
+  cat > monitor.sh << 'EOF'
 #!/bin/bash
 
-# Este script executa a otimização do banco de dados
-LOG_FILE="/var/log/db-optimize.log"
-
-echo "$(date) - Iniciando otimização do banco de dados" >> $LOG_FILE
-cd /app
-
-# Executar script de otimização
-node database-optimizations.js >> $LOG_FILE 2>&1
-
-# Verificar resultado
-if [ $? -eq 0 ]; then
-    echo "$(date) - Otimização concluída com sucesso" >> $LOG_FILE
-else
-    echo "$(date) - ERRO: Falha na otimização do banco de dados" >> $LOG_FILE
-fi
-EOF
-
-chmod +x /app/optimize-db-cron.sh
-
-# Configurar para executar uma vez por dia às 3:00 da manhã
-(crontab -l 2>/dev/null; echo "0 3 * * * /app/optimize-db-cron.sh") | crontab -
-
-# Executar a primeira otimização se o tamanho do db.json for maior que 5MB
-DB_SIZE=$(stat -c%s "/app/db.json" 2>/dev/null || stat -f%z "/app/db.json" 2>/dev/null)
-if [ -n "$DB_SIZE" ] && [ $DB_SIZE -gt 5000000 ]; then
-    echo "Arquivo db.json grande (${DB_SIZE} bytes), executando otimização inicial..."
-    /app/optimize-db-cron.sh
-fi
-
-# Determinar se estamos em ambiente de produção
-NODE_ENV=${NODE_ENV:-development}
-IS_PRODUCTION=false
-
-if [ "$NODE_ENV" = "production" ]; then
-    IS_PRODUCTION=true
-else
-    # Verificar o tamanho do db.json para decidir se devemos usar o servidor de produção
-    DB_SIZE=$(stat -c%s "/app/db.json" 2>/dev/null || stat -f%z "/app/db.json" 2>/dev/null)
-    if [ -n "$DB_SIZE" ] && [ $DB_SIZE -gt 5000000 ]; then # 5MB
-        echo "Arquivo db.json grande (${DB_SIZE} bytes), usando servidor de produção para melhor performance."
-        IS_PRODUCTION=true
-    fi
-fi
-
-# Instalar dependências adicionais para o servidor de produção
-if [ "$IS_PRODUCTION" = true ]; then
-    echo "Configurando ambiente de produção..."
-    npm install express cors morgan lowdb
-    
-    # Verificar se o arquivo server-prod.js existe
-    if [ ! -f "/app/server-prod.js" ]; then
-        echo "ERRO: server-prod.js não encontrado. Criando arquivo..."
-        # O conteúdo deste arquivo está omitido aqui, pois já foi criado anteriormente
-        # Se necessário, incluir o conteúdo do server-prod.js aqui
-    fi
-    
-    # Criar diretório de logs
-    mkdir -p /app/logs
-fi
-
-# Criar script de monitoramento
-echo "Criando script de monitoramento..."
-cat > /app/monitor.sh << 'EOF'
-#!/bin/bash
-
-LOG_FILE="/var/log/api-monitor.log"
+LOG_FILE="logs/api-monitor.log"
 RESTART_COUNT=0
 MAX_RESTARTS=100
 JSON_SERVER_PID=$1
@@ -234,18 +198,16 @@ start_server() {
     
     echo "$(date) - Reinicialização #$RESTART_COUNT. Iniciando servidor..." >> $LOG_FILE
     
-    cd /app
-    
     if [ "$IS_PRODUCTION" = "true" ]; then
         echo "$(date) - Iniciando servidor de produção..." >> $LOG_FILE
         # Usar o novo servidor de produção
-        node --expose-gc server-prod.js > /var/log/server-prod.log 2>&1 &
+        node server-prod.js > logs/server-prod.log 2>&1 &
         JSON_SERVER_PID=$!
         echo "$(date) - Novo servidor de produção PID: $JSON_SERVER_PID" >> $LOG_FILE
     else
         echo "$(date) - Iniciando JSON Server..." >> $LOG_FILE
         # Usar o JSON Server original
-        json-server --host 0.0.0.0 --port 3000 --watch db.json --routes routes.json --middlewares ./server-commonjs.js > /var/log/json-server.log 2>&1 &
+        json-server --host 0.0.0.0 --port 3000 --watch db.json --routes routes.json > logs/json-server.log 2>&1 &
         JSON_SERVER_PID=$!
         echo "$(date) - Novo JSON Server PID: $JSON_SERVER_PID" >> $LOG_FILE
     fi
@@ -258,21 +220,23 @@ start_server() {
         echo "$(date) - Falha ao iniciar o servidor. Tentando modo simples..." >> $LOG_FILE
         
         if [ "$IS_PRODUCTION" = "true" ]; then
-            # Tentar sem a flag --expose-gc
-            node server-prod.js > /var/log/server-prod-fallback.log 2>&1 &
+            # Tentar com json-server
+            json-server --host 0.0.0.0 --port 3000 --watch db.json > logs/json-server-fallback.log 2>&1 &
             JSON_SERVER_PID=$!
-            echo "$(date) - Novo servidor de produção PID (fallback): $JSON_SERVER_PID" >> $LOG_FILE
+            echo "$(date) - Novo JSON Server PID (fallback): $JSON_SERVER_PID" >> $LOG_FILE
         else
             # Tentar iniciar JSON Server no modo simples
-            json-server --host 0.0.0.0 --port 3000 --watch db.json > /var/log/json-server-basic.log 2>&1 &
+            json-server --host 0.0.0.0 --port 3000 --watch db.json > logs/json-server-basic.log 2>&1 &
             JSON_SERVER_PID=$!
             echo "$(date) - Novo JSON Server PID (modo simples): $JSON_SERVER_PID" >> $LOG_FILE
         fi
     fi
     
     # Exportar o novo PID para o script principal
-    echo $JSON_SERVER_PID > /tmp/json-server-pid
+    echo $JSON_SERVER_PID > server-pid
 }
+
+mkdir -p logs
 
 # Loop de monitoramento a cada 60 segundos
 while true; do
@@ -281,157 +245,201 @@ while true; do
 done
 EOF
 
-chmod +x /app/monitor.sh
+  chmod +x monitor.sh
+  
+  # Iniciar o monitor em segundo plano
+  ./monitor.sh $SERVER_PID $IS_PRODUCTION &
+  MONITOR_PID=$!
+  log "Monitor iniciado com PID: $MONITOR_PID"
+  
+  # Salvar o PID do monitor
+  echo $MONITOR_PID > monitor-pid
+}
 
-# Iniciar o servidor apropriado (produção ou desenvolvimento)
-echo "Iniciando servidor..."
-cd /app
-
-if [ "$IS_PRODUCTION" = true ]; then
-    echo "Usando servidor de produção..."
-    node --expose-gc server-prod.js > /var/log/server-prod.log 2>&1 &
+# Função principal
+main() {
+  log "Iniciando sistema..."
+  
+  # Verificar e instalar dependências
+  install_deps
+  
+  # Configurar Nginx
+  configure_nginx
+  
+  # Verificar arquivos necessários
+  check_required_files
+  
+  # Determinar se estamos em ambiente de produção
+  NODE_ENV=${NODE_ENV:-development}
+  IS_PRODUCTION=false
+  
+  if [ "$NODE_ENV" = "production" ]; then
+    IS_PRODUCTION=true
+  else
+    # Verificar o tamanho do db.json para decidir se devemos usar o servidor de produção
+    if [ -f "db.json" ]; then
+      DB_SIZE=$(stat -c%s "db.json" 2>/dev/null || stat -f%z "db.json" 2>/dev/null || echo "0")
+      if [ -n "$DB_SIZE" ] && [ "$DB_SIZE" -gt 5000000 ]; then # 5MB
+        log "Arquivo db.json grande (${DB_SIZE} bytes), usando servidor de produção para melhor performance."
+        IS_PRODUCTION=true
+      fi
+    fi
+  fi
+  
+  # Tentar iniciar o servidor apropriado
+  log "Iniciando servidor..."
+  SERVER_PID=""
+  
+  if [ "$IS_PRODUCTION" = true ] && [ -f "server-prod.js" ]; then
+    log "Usando servidor de produção..."
+    node server-prod.js > logs/server-prod.log 2>&1 &
     SERVER_PID=$!
-else
-    echo "Usando JSON Server..."
-    # Tentar iniciar usando o server.js original primeiro
+    
+    # Verificar se iniciou
+    sleep 5
+    if ! ps -p $SERVER_PID > /dev/null; then
+      log "ERRO: Falha ao iniciar servidor de produção. Tentando JSON Server..."
+      IS_PRODUCTION=false
+    else
+      log "Servidor de produção iniciado com sucesso. PID: $SERVER_PID"
+    fi
+  fi
+  
+  # Se não estamos usando servidor de produção ou ele falhou, usar JSON Server
+  if [ "$IS_PRODUCTION" = false ] || [ -z "$SERVER_PID" ] || ! ps -p $SERVER_PID > /dev/null; then
+    log "Usando JSON Server..."
+    
+    # Tentar iniciar server.js original
     if [ -f "server.js" ]; then
-        echo "Tentando iniciar com server.js original..."
-        node server.js > /var/log/json-server.log 2>&1 &
+      log "Tentando iniciar com server.js original..."
+      node server.js > logs/server.log 2>&1 &
+      SERVER_PID=$!
+      
+      # Verificar se iniciou
+      sleep 5
+      if ! ps -p $SERVER_PID > /dev/null; then
+        log "ERRO: Falha ao iniciar com server.js. Tentando JSON Server diretamente..."
+      else
+        log "server.js iniciado com sucesso. PID: $SERVER_PID"
+      fi
+    fi
+    
+    # Se server.js falhou ou não existe, usar JSON Server diretamente
+    if [ -z "$SERVER_PID" ] || ! ps -p $SERVER_PID > /dev/null; then
+      log "Iniciando JSON Server diretamente..."
+      json-server --host 0.0.0.0 --port 3000 --watch db.json --routes routes.json > logs/json-server.log 2>&1 &
+      SERVER_PID=$!
+      
+      # Verificar se iniciou
+      sleep 5
+      if ! ps -p $SERVER_PID > /dev/null; then
+        log "ERRO: Falha ao iniciar JSON Server com configurações completas. Tentando modo básico..."
+        json-server --host 0.0.0.0 --port 3000 --watch db.json > logs/json-server-basic.log 2>&1 &
         SERVER_PID=$!
         
-        # Esperar inicialização
         sleep 5
-        
-        # Verificar se iniciou
         if ! ps -p $SERVER_PID > /dev/null; then
-            echo "Falha ao iniciar com server.js original. Usando json-server padrão..."
-            json-server --host 0.0.0.0 --port 3000 --watch db.json --routes routes.json --middlewares ./server-commonjs.js > /var/log/json-server.log 2>&1 &
-            SERVER_PID=$!
+          log "ERRO CRÍTICO: Todas as tentativas de iniciar o servidor falharam."
+          exit 1
         else
-            echo "Server.js original iniciado com sucesso."
+          log "JSON Server iniciado em modo básico. PID: $SERVER_PID"
         fi
-    else
-        # Iniciar com json-server padrão
-        json-server --host 0.0.0.0 --port 3000 --watch db.json --routes routes.json --middlewares ./server-commonjs.js > /var/log/json-server.log 2>&1 &
-        SERVER_PID=$!
+      else
+        log "JSON Server iniciado com sucesso. PID: $SERVER_PID"
+      fi
     fi
-fi
-
-# Esperar inicialização
-sleep 5
-
-# Verificar se o processo está rodando
-echo "Servidor PID: $SERVER_PID"
-if ps -p $SERVER_PID > /dev/null; then
-    echo "Servidor iniciado com sucesso."
-else
-    echo "ERRO: Servidor falhou ao iniciar. Verificando logs:"
-    
-    if [ "$IS_PRODUCTION" = true ]; then
-        cat /var/log/server-prod.log
-        
-        # Tentar iniciar em modo fallback
-        echo "Tentando iniciar servidor de produção em modo fallback..."
-        node server-prod.js > /var/log/server-prod-fallback.log 2>&1 &
-        SERVER_PID=$!
-    else
-        cat /var/log/json-server.log
-        
-        # Tentar iniciar JSON Server no modo básico como último recurso
-        echo "Tentando iniciar JSON Server em modo básico..."
-        json-server --host 0.0.0.0 --port 3000 --watch db.json > /var/log/json-server-basic.log 2>&1 &
-        SERVER_PID=$!
-    fi
-    
-    sleep 3
-    if ps -p $SERVER_PID > /dev/null; then
-        echo "Servidor iniciado em modo fallback."
-    else
-        echo "ERRO CRÍTICO: Todas as tentativas de iniciar o servidor falharam."
-        exit 1
-    fi
-fi
-
-# Salvar o PID para o monitor
-echo $SERVER_PID > /tmp/json-server-pid
-
-# Iniciar o monitor em segundo plano
-/app/monitor.sh $SERVER_PID $IS_PRODUCTION &
-MONITOR_PID=$!
-echo "Monitor iniciado com PID: $MONITOR_PID"
-
-# Verificar se o servidor está respondendo
-echo "Verificando se o servidor está respondendo..."
-curl -v --max-time 10 http://localhost:3000/categories || echo "ERRO: Servidor não está respondendo inicialmente."
-
-# Criar uma rota API de teste para verificação de integridade
-cat > /app/api-test-endpoint.json << 'EOF'
-{
-  "status": "ok",
-  "timestamp": "",
-  "version": "1.0.0"
-}
-EOF
-
-# Função para atualizar o timestamp da rota de teste
-update_api_test() {
-    echo "{\"status\":\"ok\",\"timestamp\":\"$(date -u '+%Y-%m-%dT%H:%M:%SZ')\",\"version\":\"1.0.0\"}" > /app/api-test-endpoint.json
-}
-
-# Loop principal - manter script rodando e registrando status
-echo "Serviços iniciados. Configurando verificações periódicas..."
-
-while true; do
+  fi
+  
+  # Salvar o PID do servidor
+  echo $SERVER_PID > server-pid
+  
+  # Iniciar o monitor
+  start_monitor $SERVER_PID $IS_PRODUCTION
+  
+  # Criar uma rota API de teste para verificação de integridade
+  log "Criando endpoint de teste..."
+  mkdir -p public
+  echo "{\"status\":\"ok\",\"timestamp\":\"$(date -u '+%Y-%m-%dT%H:%M:%SZ')\",\"version\":\"1.0.0\"}" > public/api-test.json
+  
+  # Verificar se o servidor está respondendo
+  log "Verificando se o servidor está respondendo..."
+  curl -s --max-time 10 http://localhost:3000/categories || log "AVISO: Servidor não está respondendo inicialmente."
+  
+  # Loop principal - manter script rodando e registrando status
+  log "Serviços iniciados. Configurando verificações periódicas..."
+  
+  # Função para atualizar o timestamp da rota de teste
+  update_api_test() {
+    mkdir -p public
+    echo "{\"status\":\"ok\",\"timestamp\":\"$(date -u '+%Y-%m-%dT%H:%M:%SZ')\",\"version\":\"1.0.0\"}" > public/api-test.json
+  }
+  
+  while true; do
     # Atualizar endpoint de teste
     update_api_test
     
     # Log de status a cada 5 minutos
-    echo "=== Status dos serviços $(date) ==="
-    echo "Nginx status:"
+    log "=== Status dos serviços $(date) ==="
+    
+    # Verificar Nginx
+    log "Nginx status:"
     service nginx status || { 
-        echo "Nginx não está rodando! Reiniciando..."
-        service nginx restart
+      log "AVISO: Nginx não está rodando. Tentando reiniciar..."
+      service nginx restart
     }
     
     # Verificar se o monitor ainda está rodando
-    if ! ps -p $MONITOR_PID > /dev/null; then
-        echo "Monitor não está rodando! Reiniciando..."
-        # Obter o PID atual do servidor
-        if [ -f "/tmp/json-server-pid" ]; then
-            SERVER_PID=$(cat /tmp/json-server-pid)
-        fi
-        /app/monitor.sh $SERVER_PID $IS_PRODUCTION &
-        MONITOR_PID=$!
-        echo "Novo monitor iniciado com PID: $MONITOR_PID"
+    MONITOR_PID=$(cat monitor-pid 2>/dev/null || echo "")
+    if [ -n "$MONITOR_PID" ] && ! ps -p $MONITOR_PID > /dev/null; then
+      log "AVISO: Monitor não está rodando! Reiniciando..."
+      # Obter o PID atual do servidor
+      SERVER_PID=$(cat server-pid 2>/dev/null || echo "")
+      if [ -n "$SERVER_PID" ]; then
+        start_monitor $SERVER_PID $IS_PRODUCTION
+      else
+        log "ERRO: Não foi possível encontrar o PID do servidor para reiniciar o monitor"
+      fi
     fi
     
     # Verificar servidor
-    echo "Servidor status (PID: $(cat /tmp/json-server-pid)):"
-    if ps -p $(cat /tmp/json-server-pid) > /dev/null; then
-        echo "Servidor está rodando."
+    SERVER_PID=$(cat server-pid 2>/dev/null || echo "")
+    if [ -n "$SERVER_PID" ]; then
+      log "Servidor status (PID: $SERVER_PID):"
+      if ps -p $SERVER_PID > /dev/null; then
+        log "Servidor está rodando."
+        
+        # Exibir logs apropriados
         if [ "$IS_PRODUCTION" = true ]; then
-            echo "Últimas linhas do log do servidor de produção:"
-            tail -n 10 /var/log/server-prod.log
+          log "Últimas linhas do log do servidor de produção:"
+          tail -n 10 logs/server-prod.log 2>/dev/null || log "Não foi possível ler o log"
         else
-            echo "Últimas linhas do log do JSON Server:"
-            tail -n 10 /var/log/json-server.log
+          log "Últimas linhas do log do JSON Server:"
+          tail -n 10 logs/json-server.log 2>/dev/null || tail -n 10 logs/server.log 2>/dev/null || log "Não foi possível ler o log"
         fi
+      else
+        log "AVISO: Servidor não está rodando segundo o PID do arquivo!"
+        log "Detalhes do monitor:"
+        tail -n 20 logs/api-monitor.log 2>/dev/null || log "Não foi possível ler o log do monitor"
+      fi
     else
-        echo "ERRO: Servidor não está rodando segundo o PID do arquivo!"
-        # O monitor deve capturar e resolver isso, mas vamos verificar
-        cat /var/log/api-monitor.log | tail -n 20
+      log "ERRO: Não foi possível encontrar o PID do servidor"
     fi
     
     # Verificar resposta do servidor
-    RESPONSE=$(curl -s --max-time 5 http://localhost:3000/api-test || echo "FALHA")
-    if [ "$RESPONSE" == "FALHA" ]; then
-        echo "ERRO: Servidor não está respondendo ao teste de API!"
-        echo "Detalhes do monitor:"
-        cat /var/log/api-monitor.log | tail -n 20
+    RESPONSE=$(curl -s --max-time 5 http://localhost:3000/api-test 2>/dev/null || echo "FALHA")
+    if [ "$RESPONSE" = "FALHA" ]; then
+      log "AVISO: Servidor não está respondendo ao teste de API!"
+      log "Detalhes do monitor:"
+      tail -n 20 logs/api-monitor.log 2>/dev/null || log "Não foi possível ler o log do monitor"
     else
-        echo "API respondendo corretamente: $RESPONSE"
+      log "API respondendo: $RESPONSE"
     fi
     
     # Dormir por 5 minutos
     sleep 300
-done
+  done
+}
+
+# Execução começa aqui
+mkdir -p logs
+main > logs/startup.log 2>&1
