@@ -115,44 +115,42 @@ const ScraperProductsList = () => {
 
   const fetchAutoImportStatus = async () => {
     try {
-      setStatusLoading(true);
-      const response = await axios.get('http://localhost:3000/scraper/auto-import/status');
-      setAutoImportStatus({
-        ...response.data,
-        lastCheck: new Date().toLocaleTimeString()
-      });
+      const response = await axios.get('/api/scraper/auto-import/status');
+      setAutoImportStatus(response.data);
     } catch (error) {
-      console.error('Erro ao buscar status da importação automática:', error);
-    } finally {
-      setStatusLoading(false);
+      console.error('Error fetching auto import status:', error);
     }
   };
 
   const toggleAutoImport = async () => {
     try {
-      setStatusLoading(true);
-      const endpoint = autoImportStatus.isRunning ? 
-        'http://localhost:3000/scraper/auto-import/stop' : 
-        'http://localhost:3000/scraper/auto-import/start';
+      setIsLoading(true);
+      const endpoint = autoImportStatus?.running ? 
+        '/api/scraper/auto-import/stop' : 
+        '/api/scraper/auto-import/start';
       
       await axios.post(endpoint);
-      fetchAutoImportStatus();
+      await fetchAutoImportStatus();
+      toast.success(autoImportStatus?.running ? 'Importação automática parada.' : 'Importação automática iniciada.');
     } catch (error) {
-      console.error('Erro ao alterar status da importação automática:', error);
+      console.error('Error toggling auto import:', error);
+      toast.error('Erro ao atualizar importação automática.');
     } finally {
-      setStatusLoading(false);
+      setIsLoading(false);
     }
   };
 
   const runAutoImportNow = async () => {
     try {
-      setStatusLoading(true);
-      await axios.post('http://localhost:3000/scraper/auto-import/run-now');
-      fetchAutoImportStatus();
+      setIsLoading(true);
+      await axios.post('/api/scraper/auto-import/run-now');
+      toast.success('Importação manual iniciada.');
+      await fetchAutoImportStatus();
     } catch (error) {
-      console.error('Erro ao executar importação automática:', error);
+      console.error('Error running auto import:', error);
+      toast.error('Erro ao iniciar importação manual.');
     } finally {
-      setStatusLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -162,7 +160,7 @@ const ScraperProductsList = () => {
     
     try {
       // Usando o endpoint que implementamos no scraper
-      const response = await axios.get('http://localhost:3000/scraper/products');
+      const response = await axios.get('/api/scraper/products');
       
       console.log('Resposta do scraper:', response.data);
       
@@ -235,7 +233,7 @@ const ScraperProductsList = () => {
       console.log('Produto preparado para importação:', productToImport);
       
       // Usar a URL completa para a API
-      const response = await axios.post('http://localhost:3000/api/import-product', productToImport);
+      const response = await axios.post('/api/import-product', productToImport);
       
       console.log('Resposta do servidor:', response.data);
       
@@ -312,7 +310,7 @@ const ScraperProductsList = () => {
   // Funções para a importação em massa
   const fetchImportAllStatus = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/scraper/import-all-products/status');
+      const response = await axios.get('/api/scraper/import-all-products/status');
       if (response.data && response.data.success) {
         setImportAllProgress(response.data.progress);
       }
@@ -331,7 +329,7 @@ const ScraperProductsList = () => {
         downloadImages: downloadImages // Passar a preferência do usuário
       };
       
-      const response = await axios.post('http://localhost:3000/scraper/import-all-products', config);
+      const response = await axios.post('/api/scraper/import-all-products', config);
       
       if (response.data && response.data.success) {
         toast.success('Importação em massa iniciada com sucesso!');
@@ -356,7 +354,7 @@ const ScraperProductsList = () => {
   const cancelImportAllProducts = async () => {
     try {
       setImportAllLoading(true);
-      const response = await axios.post('http://localhost:3000/scraper/import-all-products/cancel');
+      const response = await axios.post('/api/scraper/import-all-products/cancel');
       
       if (response.data && response.data.success) {
         toast.success('Importação em massa cancelada com sucesso!');

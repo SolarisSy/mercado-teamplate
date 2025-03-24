@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Cria uma instância do axios com configurações padrão
 const customFetch = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: '/api',
   timeout: 10000, // Timeout de 10 segundos
   headers: {
     'Content-Type': 'application/json',

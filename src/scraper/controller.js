@@ -19,6 +19,7 @@ class ScraperController {
     this.autoImportTimer = null;
     this.cache = new NodeCache({ stdTTL: 300 }); // Cache por 5 minutos
     this.baseUrl = 'https://www.apoioentrega.com.br';
+    this.apiUrl = process.env.API_URL || 'http://localhost:3000'; // Configurable API URL
     this.autoImportInterval = null; // Inicialmente nulo (desligado)
     this.importedProducts = new Set(); // Conjunto para rastrear produtos já importados
     this.importProgress = {
@@ -127,7 +128,7 @@ class ScraperController {
    */
   async getExistingProducts() {
     try {
-      const response = await axios.get('http://localhost:3000/products');
+      const response = await axios.get(`${this.apiUrl}/products`);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar produtos existentes:', error.message);
@@ -455,7 +456,7 @@ class ScraperController {
         title: systemProduct.title
       });
 
-      const response = await axios.post('http://localhost:3000/products', systemProduct);
+      const response = await axios.post(`${this.apiUrl}/products`, systemProduct);
 
       console.log('Produto salvo com sucesso:', {
         id: systemProduct.id,
@@ -1219,7 +1220,7 @@ class ScraperController {
         const { id } = req.params;
         
         // Obter detalhes do produto para excluir suas imagens
-        const existingProductsResponse = await axios.get(`http://localhost:3000/products/${id}`);
+        const existingProductsResponse = await axios.get(`${this.apiUrl}/products/${id}`);
         const product = existingProductsResponse.data;
         
         if (!product) {
@@ -1233,7 +1234,7 @@ class ScraperController {
         const deletedImagesCount = await this.deleteAllProductImages(product);
         
         // Excluir o produto do banco de dados
-        await axios.delete(`http://localhost:3000/products/${id}`);
+        await axios.delete(`${this.apiUrl}/products/${id}`);
         
         res.json({
           success: true,
@@ -1252,7 +1253,7 @@ class ScraperController {
     router.delete('/api/delete-all-products', async (req, res) => {
       try {
         // Obter todos os produtos
-        const productsResponse = await axios.get('http://localhost:3000/products');
+        const productsResponse = await axios.get(`${this.apiUrl}/products`);
         const products = productsResponse.data;
         
         console.log(`Preparando para excluir ${products.length} produtos`);
@@ -1269,7 +1270,7 @@ class ScraperController {
             deletedImages += imagesDeleted;
             
             // Excluir o produto do banco de dados
-            await axios.delete(`http://localhost:3000/products/${product.id}`);
+            await axios.delete(`${this.apiUrl}/products/${product.id}`);
             deletedProducts++;
             
             console.log(`Produto ${product.id} excluído com ${imagesDeleted} imagens`);
@@ -1406,6 +1407,79 @@ class ScraperController {
         progress: this.getImportAllStatus()
       });
     });
+  }
+
+  /**
+   * Verifica se um produto existe no sistema pelo ID
+   * @param {string} id ID do produto
+   * @returns {Promise<Object|null>} Produto existente ou null
+   */
+  async getProductById(id) {
+    try {
+      const existingProductsResponse = await axios.get(`${this.apiUrl}/products/${id}`);
+      return existingProductsResponse.data;
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        return null; // Produto não existe
+      }
+      console.error(`Erro ao verificar existência do produto ${id}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Exclui um produto do sistema
+   * @param {string} id ID do produto
+   * @returns {Promise<boolean>} Sucesso da operação
+   */
+  async deleteProduct(id) {
+    try {
+      await axios.delete(`${this.apiUrl}/products/${id}`);
+      return true;
+    } catch (error) {
+      console.error(`Erro ao excluir produto ${id}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Exclui todos os produtos do sistema
+   * @returns {Promise<{status: string, count: number}>} Resultado da operação
+   */
+  async deleteAllProducts() {
+    try {
+      const productsResponse = await axios.get(`${this.apiUrl}/products`);
+      const products = productsResponse.data;
+      
+      let deleted = 0;
+      let imagesDeleted = 0;
+      
+      for (const product of products) {
+        try {
+          // Excluir imagens associadas
+          const imageCount = await this.deleteAllProductImages(product);
+          imagesDeleted += imageCount;
+          
+          // Excluir o produto
+          await axios.delete(`${this.apiUrl}/products/${product.id}`);
+          deleted++;
+        } catch (error) {
+          console.error(`Erro ao excluir produto ${product.id}:`, error.message);
+        }
+      }
+      
+      return {
+        status: 'success',
+        count: deleted,
+        imagesDeleted
+      };
+    } catch (error) {
+      console.error('Erro ao excluir todos os produtos:', error.message);
+      return {
+        status: 'error',
+        message: error.message
+      };
+    }
   }
 }
 
