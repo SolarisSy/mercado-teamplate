@@ -215,7 +215,6 @@ Password: admin123
     <ul>
       <li>Use the included <code>docker-compose.yml</code> file</li>
       <li>Run <code>docker-compose up -d</code> to start the services</li>
-      <li><strong>Nota sobre compatibilidade de shell:</strong> Os scripts de inicialização foram projetados para funcionar com bash e sh. Em ambientes onde o bash não é o padrão, os scripts se adaptarão automaticamente, mas é recomendado usar bash para melhor desempenho.</li>
     </ul>
   </p></li>
   <li><p>Run the application using <code>./start.sh</code> for production mode with all optimizations enabled</p></li>

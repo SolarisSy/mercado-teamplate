@@ -1,13 +1,4 @@
-#!/usr/bin/env bash
-# Caso falhe, tente: #!/bin/sh
-
-# Detectar shell disponível
-if [ -z "$BASH_VERSION" ]; then
-  echo "Aviso: Este script foi projetado para Bash. Usando modo de compatibilidade com sh."
-  USING_SH=true
-else
-  USING_SH=false
-fi
+#!/bin/sh
 
 # Função de log
 log() {
@@ -33,7 +24,7 @@ install_deps() {
   
   # Instalar pacotes faltantes
   if [ -n "$missing_packages" ]; then
-    log "Instalando dependências faltantes:$missing_packages"
+    log "Instalando dependências faltantes: $missing_packages"
     npm install --no-save $missing_packages || {
       log "AVISO: Falha ao instalar via npm. Tentando globalmente..."
       npm install -g $missing_packages || {
@@ -155,9 +146,9 @@ start_monitor() {
   
   log "Iniciando script de monitoramento..."
   
-  # Criar script de monitoramento compatível com sh
+  # Criar script de monitoramento
   cat > monitor.sh << 'EOF'
-#!/bin/sh
+#!/bin/bash
 
 LOG_FILE="logs/api-monitor.log"
 RESTART_COUNT=0
@@ -180,7 +171,7 @@ check_and_restart() {
     MEMORY_USAGE=$(ps -o rss= -p $JSON_SERVER_PID | awk '{print $1/1024}')
     echo "$(date) - Uso de memória: ${MEMORY_USAGE}MB" >> $LOG_FILE
     
-    if [ "$(echo "$MEMORY_USAGE > $MAX_MEMORY_MB" | bc -l)" = "1" ]; then
+    if [ "$(echo "$MEMORY_USAGE > $MAX_MEMORY_MB" | bc -l)" -eq 1 ]; then
         echo "$(date) - Servidor excedeu limite de memória (${MEMORY_USAGE}MB > ${MAX_MEMORY_MB}MB). Reiniciando..." >> $LOG_FILE
         kill -9 $JSON_SERVER_PID
         start_server
@@ -198,7 +189,7 @@ check_and_restart() {
 }
 
 start_server() {
-    RESTART_COUNT=$((RESTART_COUNT+1))
+    RESTART_COUNT=$(expr $RESTART_COUNT + 1)
     
     if [ $RESTART_COUNT -gt $MAX_RESTARTS ]; then
         echo "$(date) - Número máximo de reinicializações excedido ($MAX_RESTARTS). Abortando." >> $LOG_FILE
