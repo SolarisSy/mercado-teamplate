@@ -314,7 +314,7 @@ Módulo responsável pela autenticação e autorização no sistema.
   - Logs detalhados de cada operação
 
 **Interface de usuário associada:**
-- `ScraperProductsList.tsx`: Componente de interface para controle e monitoramento do scraper, incluindo painel dedicado à importação em massa com barra de progresso, estatísticas em tempo real e opções de configuração. Implementa feedback detalhado sobre o processo de importação e apresenta tooltips informativos posicionados adequadamente para evitar bloqueio de interações.
+- `ScraperProductsList.tsx`: Componente de interface para controle e monitoramento do scraper, incluindo painel dedicado à importação em massa com barra de progresso, estatísticas em tempo real e opções de configuração.
 - `ProductsList.tsx`: Componente de interface para gerenciamento de produtos, incluindo exclusão individual e em massa.
 
 **Status:** Atualizado

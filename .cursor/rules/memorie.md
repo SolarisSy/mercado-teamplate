@@ -348,46 +348,6 @@ O sistema anteriormente sempre baixava e armazenava localmente todas as imagens 
 **Observações:**
 Esta implementação oferece mais controle ao usuário sobre o comportamento do sistema de importação, permitindo escolher a abordagem mais adequada às suas necessidades específicas. O comportamento padrão continua sendo baixar as imagens para manter compatibilidade com o sistema existente.
 
-## 2025-04-12 - Correção do posicionamento do tooltip e melhoria no feedback em tempo real
-
-**Responsável:** Claude Sonnet 3.7
-
-**Tipo de mudança:** Correção de interface e melhoria de usabilidade
-
-**Descrição:**  
-Correção do posicionamento do tooltip informativo que estava bloqueando o botão de importação em massa e aprimoramento do feedback em tempo real durante o processo de importação.
-
-**Razão:**  
-1. O tooltip de informações sobre a opção "Baixar imagens localmente" estava posicionado sobre o botão de importação, impedindo que o usuário clicasse nele quando o tooltip estava visível
-2. A atualização do progresso de importação ocorria em intervalos muito longos (5 segundos), fornecendo feedback insuficiente ao usuário durante o processo
-
-**Solução implementada:**
-1. Reposicionamento do tooltip:
-   - Alterada a posição do tooltip para aparecer acima do ícone de informação, em vez de à direita
-   - Adicionada transformação CSS para centralizar horizontalmente o tooltip
-   - Adicionada propriedade `pointer-events-none` para garantir que o tooltip não interfira com interações do mouse
-   - Adicionada margem inferior para melhor espaçamento visual
-
-2. Melhoria no feedback em tempo real:
-   - Reduzido o intervalo de atualização do status de 5 para 2 segundos
-   - Adicionada seção de métricas abaixo da barra de progresso mostrando detalhes como:
-     - Número total de produtos encontrados
-     - Quantidade de produtos importados (com taxa de importação quando disponível)
-     - Quantidade de falhas
-   - Melhorada a estrutura visual do componente de progresso
-
-**Impacto:**
-- Eliminação do problema de acessibilidade que impedia o clique no botão de importação
-- Feedback mais frequente e informativo durante o processo de importação
-- Melhor experiência do usuário com maior visibilidade do progresso em tempo real
-- Maior confiança no processo com visualização constante das métricas de importação
-
-**Arquivos modificados:**
-- `src/components/ScraperProductsList.tsx`
-
-**Observações:**
-Esta correção aborda problemas de usabilidade relatados pelos usuários, melhorando significativamente a experiência de uso da funcionalidade de importação em massa. O posicionamento do tooltip segue agora as melhores práticas de design de interfaces, e o feedback mais frequente proporciona uma sensação de progresso contínuo durante operações de longa duração.
-
 ---
 **Data:** 2024-05-31
 **Funcionalidade:** Adição de opção para escolher entre baixar imagens ou usar URLs originais na importação em massa
@@ -421,36 +381,3 @@ Anteriormente, o sistema sempre baixava as imagens para armazenamento local dura
 
 **Observações:**
 Esta implementação fornece mais controle aos usuários sobre o processo de importação, mantendo a compatibilidade com importações anteriores. O comportamento padrão continua sendo baixar as imagens para manter a consistência com a experiência anterior. 
-
----
-**Data:** 2024-06-01
-**Funcionalidade:** Correção do tooltip e melhoria no feedback de importação
-**Responsável:** Claude Sonnet 3.7
-**Tipo de Alteração:** Correção de interface e melhoria de usabilidade
-**Descrição:**
-Correção do posicionamento incorreto do tooltip informativo no painel de importação em massa e aprimoramento do feedback em tempo real durante o processo de importação.
-
-**Razão:**
-Foram identificados dois problemas na interface do painel de importação em massa:
-1. O tooltip de informações sobre a opção "Baixar imagens localmente" estava posicionado incorretamente, sobrepondo-se ao botão de importação e impedindo a interação com ele
-2. As atualizações do progresso de importação ocorriam em intervalos longos, dificultando o acompanhamento em tempo real do processo
-
-**Solução Implementada:**
-- Reposicionamento do tooltip para aparecer acima do ícone de informação (em vez de à direita)
-- Adição da propriedade CSS `pointer-events-none` para evitar que o tooltip bloqueie interações
-- Centralização horizontal do tooltip com transformação CSS
-- Redução do intervalo de atualização de status de 5 para 2 segundos
-- Implementação de uma nova seção de métricas detalhadas abaixo da barra de progresso
-- Reorganização do layout do componente de progresso para apresentar informações mais claras
-
-**Impacto:**
-- Correção do bloqueio de interação com o botão de importação
-- Visualização mais frequente e detalhada do progresso durante a importação
-- Melhoria na experiência do usuário ao acompanhar processos de longa duração
-- Maior transparência no processo com exibição contínua de métricas como taxa de importação
-
-**Arquivos Modificados:**
-- `src/components/ScraperProductsList.tsx`
-
-**Observações:**
-Esta modificação atende a uma solicitação direta dos usuários que relataram dificuldades para utilizar o botão de importação devido ao tooltip invasivo. A melhoria no feedback em tempo real também era uma necessidade para operações que podem durar longos períodos, proporcionando maior confiança durante o processo de importação em massa. 
