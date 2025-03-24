@@ -1,5 +1,5 @@
 [phases.setup]
-aptPkgs = ["nginx", "curl", "procps", "findutils"]
+aptPkgs = ["nginx", "curl", "procps", "findutils", "bash"]
 cmds = ["npm install -g lowdb json-server cors morgan"]
 
 [phases.install]
@@ -9,7 +9,7 @@ cmds = ["npm install --legacy-peer-deps"]
 cmds = ["npm run build"]
 
 [phases.start]
-cmd = "sh ./start.sh"
+cmd = "bash ./start.sh"
 
 [start]
-cmd = "sh ./start.sh"
+cmd = "bash ./start.sh"

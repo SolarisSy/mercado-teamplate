@@ -78,4 +78,46 @@ Estas mudanças resultam em:
 - Log mais detalhado para facilitar diagnóstico de problemas futuros
 
 ### Observações Técnicas
-As modificações mantêm o comportamento funcional do sistema, apenas garantindo maior compatibilidade com diferentes ambientes. A abordagem foi projetada para ser tolerante a falhas, sempre priorizando o funcionamento mínimo do sistema em vez de falhar completamente quando condições ideais não são atingidas. 
+As modificações mantêm o comportamento funcional do sistema, apenas garantindo maior compatibilidade com diferentes ambientes. A abordagem foi projetada para ser tolerante a falhas, sempre priorizando o funcionamento mínimo do sistema em vez de falhar completamente quando condições ideais não são atingidas.
+
+## 2025-04-19 - Correção de Compatibilidade do start.sh com Diferentes Shells
+**Responsável**: Claude Sonnet 3.7
+**Tipo de Alteração**: Correção de bugs
+
+### Descrição do Problema
+O script `start.sh` estava apresentando erros de sintaxe ao ser executado no ambiente de produção da VPS, impedindo a inicialização do sistema. O erro específico era:
+
+```
+./start.sh: 15: Syntax error: "(" unexpected (expecting "}")
+```
+
+Este erro ocorria porque o script estava sendo executado pelo shell `/bin/sh` em alguns ambientes, mas utilizava recursos específicos do Bash (como arrays com a sintaxe `array=("item1" "item2")`) que não são compatíveis com o shell padrão.
+
+### Solução Implementada
+1. **Modificação do shebang**:
+   - Alteração de `#!/bin/bash` para `#!/usr/bin/env bash` para melhor portabilidade
+   - Adição de comentário alternativo indicando a possibilidade de usar `#!/bin/sh`
+   - Implementação de detecção do shell em execução para adaptar comportamento
+
+2. **Reescrita das estruturas incompatíveis**:
+   - Substituição de arrays no estilo Bash por variáveis compatíveis com sh
+   - Modificação de loops que iteravam sobre arrays para sintaxe compatível
+   - Alteração de operadores de teste para versões mais universais
+
+3. **Garantia de execução com Bash**:
+   - Adição de "bash" ao aptPkgs no nixpacks.toml para garantir sua disponibilidade
+   - Alteração dos comandos de execução de `sh ./start.sh` para `bash ./start.sh`
+
+4. **Compatibilidade nos Scripts Filhos**:
+   - Adaptação do script monitor.sh para usar sintaxe compatível com sh
+   - Substituição de operadores aritméticos para comandos compatíveis (usando `bc`)
+
+### Impacto das Alterações
+Estas mudanças resultam em:
+- Compatibilidade com ambientes onde o Bash não é o shell padrão
+- Eliminação de erros de sintaxe durante a inicialização
+- Manutenção da funcionalidade original mesmo em ambientes restritos
+- Detecção automática das capacidades do shell para otimização quando possível
+
+### Observações Técnicas
+As modificações garantem que o script funcione adequadamente em qualquer ambiente Unix/Linux, independentemente do shell padrão disponível. Embora o Bash seja preferido e ofereça mais recursos, o script agora pode se adaptar e funcionar corretamente mesmo quando executado com o sh mais básico. Esta alteração é especialmente importante para ambientes de contêiner ou sistemas embarcados onde o Bash pode não estar disponível por padrão. 

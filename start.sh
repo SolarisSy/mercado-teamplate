@@ -1,4 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Caso falhe, tente: #!/bin/sh
+
+# Detectar shell disponível
+if [ -z "$BASH_VERSION" ]; then
+  echo "Aviso: Este script foi projetado para Bash. Usando modo de compatibilidade com sh."
+  USING_SH=true
+else
+  USING_SH=false
+fi
 
 # Função de log
 log() {
@@ -11,23 +20,23 @@ log "Iniciando script de inicialização..."
 install_deps() {
   log "Verificando dependências necessárias..."
   
-  # Lista de pacotes npm para verificar
-  npm_packages=("express" "cors" "morgan" "lowdb" "json-server")
-  missing_packages=()
+  # Lista de pacotes npm para verificar (compatível com sh)
+  npm_packages="express cors morgan lowdb json-server"
+  missing_packages=""
   
-  for pkg in "${npm_packages[@]}"; do
+  for pkg in $npm_packages; do
     if ! npm list --depth=0 "$pkg" >/dev/null 2>&1; then
       log "Dependência não encontrada: $pkg"
-      missing_packages+=("$pkg")
+      missing_packages="$missing_packages $pkg"
     fi
   done
   
   # Instalar pacotes faltantes
-  if [ ${#missing_packages[@]} -gt 0 ]; then
-    log "Instalando dependências faltantes: ${missing_packages[*]}"
-    npm install --no-save "${missing_packages[@]}" || {
+  if [ -n "$missing_packages" ]; then
+    log "Instalando dependências faltantes:$missing_packages"
+    npm install --no-save $missing_packages || {
       log "AVISO: Falha ao instalar via npm. Tentando globalmente..."
-      npm install -g "${missing_packages[@]}" || {
+      npm install -g $missing_packages || {
         log "ERRO: Falha ao instalar dependências. Tentando continuar mesmo assim."
       }
     }
@@ -146,9 +155,9 @@ start_monitor() {
   
   log "Iniciando script de monitoramento..."
   
-  # Criar script de monitoramento
+  # Criar script de monitoramento compatível com sh
   cat > monitor.sh << 'EOF'
-#!/bin/bash
+#!/bin/sh
 
 LOG_FILE="logs/api-monitor.log"
 RESTART_COUNT=0
@@ -171,7 +180,7 @@ check_and_restart() {
     MEMORY_USAGE=$(ps -o rss= -p $JSON_SERVER_PID | awk '{print $1/1024}')
     echo "$(date) - Uso de memória: ${MEMORY_USAGE}MB" >> $LOG_FILE
     
-    if (( $(echo "$MEMORY_USAGE > $MAX_MEMORY_MB" | bc -l) )); then
+    if [ "$(echo "$MEMORY_USAGE > $MAX_MEMORY_MB" | bc -l)" = "1" ]; then
         echo "$(date) - Servidor excedeu limite de memória (${MEMORY_USAGE}MB > ${MAX_MEMORY_MB}MB). Reiniciando..." >> $LOG_FILE
         kill -9 $JSON_SERVER_PID
         start_server
