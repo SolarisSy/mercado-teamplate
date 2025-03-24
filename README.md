@@ -176,3 +176,54 @@ Password: admin123
   <li><p>Integration with payment gateways</p></li>
   <li><p>Enhanced product filtering and search</p></li>
 </ul>
+
+<h2>Production Deployment</h2>
+
+<p>This application includes robust production-ready server capabilities:</p>
+
+<h3>Enhanced Server Stability</h3>
+
+<ul>
+  <li><p><b>Automatic Mode Selection</b> - The system automatically switches between development (JSON Server) and production (Express) modes based on database size or environment variables</p></li>
+  <li><p><b>Memory Management</b> - Advanced memory monitoring and garbage collection to prevent crashes due to memory leaks</p></li>
+  <li><p><b>Self-Healing</b> - Automatic server restarts if the API becomes unresponsive or exceeds memory thresholds</p></li>
+  <li><p><b>Comprehensive Logging</b> - Detailed logs to help diagnose issues in production</p></li>
+</ul>
+
+<h3>Database Optimization</h3>
+
+<ul>
+  <li><p><b>Automatic Maintenance</b> - Daily database optimization runs at 3 AM to keep the database size manageable</p></li>
+  <li><p><b>Historical Data Management</b> - Keeps only the most recent products and orders to prevent database bloat</p></li>
+  <li><p><b>Automatic Backups</b> - Creates backup files before optimization to prevent data loss</p></li>
+</ul>
+
+<h3>Deployment Instructions</h3>
+
+<p>To deploy the application to a VPS or other production environment:</p>
+
+<ol>
+  <li><p>Clone the repository to your production server</p></li>
+  <li><p>Run <code>npm install</code> to install dependencies</p></li>
+  <li><p>Set environment variables:
+    <ul>
+      <li><code>NODE_ENV=production</code> - Forces production mode regardless of database size</li>
+      <li><code>PORT=3000</code> - (Optional) Change the default port</li>
+    </ul>
+  </p></li>
+  <li><p>For Docker deployment:
+    <ul>
+      <li>Use the included <code>docker-compose.yml</code> file</li>
+      <li>Run <code>docker-compose up -d</code> to start the services</li>
+    </ul>
+  </p></li>
+  <li><p>Run the application using <code>./start.sh</code> for production mode with all optimizations enabled</p></li>
+</ol>
+
+<p>The production server includes comprehensive monitoring that will automatically restart if issues are detected. To manually check server status, use:</p>
+
+```
+curl http://localhost:3000/api-test
+```
+
+<p>This will return server health information including uptime and memory usage.</p>
