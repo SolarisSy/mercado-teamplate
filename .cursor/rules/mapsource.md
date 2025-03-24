@@ -250,7 +250,8 @@ Módulo responsável pela autenticação e autorização no sistema.
 - Importação automática de produtos
 - Importação manual de produtos
 - Importação em massa de todos os produtos disponíveis
-- Download e armazenamento local de imagens
+- Download e armazenamento local de imagens (opcional)
+- Exclusão de produtos com limpeza de imagens associadas
 
 **Métodos principais:**
 - `initialize()`: Inicializa o controlador e configura cache
@@ -259,20 +260,24 @@ Módulo responsável pela autenticação e autorização no sistema.
 - `runAutoImport()`: Executa um ciclo de importação automática
 - `extractProducts(limit)`: Extrai produtos até o limite especificado
 - `extractProductDetails(productId)`: Extrai detalhes de um produto específico
-- `importProductToStore(product)`: Importa um produto para a loja, incluindo download de imagens
+- `importProductToStore(product, downloadImages)`: Importa um produto para a loja, com opção de baixar ou não as imagens
 - `downloadImage(imageUrl, productId)`: Baixa e salva uma imagem localmente
-- `importAllProducts(batchSize, delayBetweenBatches)`: Importa todos os produtos disponíveis em lotes
+- `deleteProductImage(imagePath)`: Exclui uma imagem específica do sistema de arquivos
+- `deleteAllProductImages(product)`: Exclui todas as imagens associadas a um produto
+- `importAllProducts(batchSize, delayBetweenBatches, downloadImages)`: Importa todos os produtos disponíveis em lotes, com opção de baixar ou não as imagens
 - `getImportAllStatus()`: Retorna o status atual da importação em massa
 
 **Rotas API disponibilizadas:**
 - `GET /scraper/products`: Lista produtos extraídos (limitado por padrão a 100)
 - `GET /scraper/products/:skuId`: Obtém detalhes de um produto específico
 - `POST /api/import-product`: Importa um único produto para a loja
+- `DELETE /api/delete-product/:id`: Exclui um produto específico e suas imagens
+- `DELETE /api/delete-all-products`: Exclui todos os produtos e suas imagens
 - `POST /scraper/auto-import/start`: Inicia importação automática
 - `POST /scraper/auto-import/stop`: Para importação automática
 - `GET /scraper/auto-import/status`: Obtém status da importação automática
 - `POST /scraper/auto-import/run-now`: Executa importação automática imediatamente
-- `POST /scraper/import-all-products`: Inicia importação em massa de todos os produtos
+- `POST /scraper/import-all-products`: Inicia importação em massa, suporta opção de download de imagens
 - `GET /scraper/import-all-products/status`: Obtém status detalhado da importação em massa
 - `POST /scraper/import-all-products/cancel`: Cancela a importação em massa em andamento
 
@@ -281,6 +286,7 @@ Módulo responsável pela autenticação e autorização no sistema.
 - **Parâmetros configuráveis**:
   - `batchSize`: Número de produtos por lote (padrão: 20)
   - `delayBetweenBatches`: Intervalo entre lotes em ms (padrão: 3000)
+  - `downloadImages`: Define se as imagens devem ser baixadas localmente (padrão: true)
 - **Rastreamento de progresso**:
   - Total de produtos encontrados
   - Produtos importados com sucesso
@@ -295,8 +301,21 @@ Módulo responsável pela autenticação e autorização no sistema.
   - Verificação de duplicidade antes da importação
   - Tratamento robusto de erros com tentativas de recuperação
 
+**Sistema de Exclusão de Produtos:**
+- **Funcionalidade**: Exclusão de produtos com limpeza de imagens associadas
+- **Mecanismos de segurança**:
+  - Verificação da existência da imagem antes da exclusão
+  - Validação do caminho da imagem para evitar exclusão de arquivos do sistema
+  - Restrição à pasta específica de imagens de produtos (`/img/produtos/`)
+  - Tratamento de erros para continuar o processo mesmo com falhas individuais
+- **Rastreamento de progresso**:
+  - Total de produtos excluídos
+  - Total de imagens removidas
+  - Logs detalhados de cada operação
+
 **Interface de usuário associada:**
-- `ScraperProductsList.tsx`: Componente de interface para controle e monitoramento do scraper, incluindo painel dedicado à importação em massa com barra de progresso e estatísticas em tempo real.
+- `ScraperProductsList.tsx`: Componente de interface para controle e monitoramento do scraper, incluindo painel dedicado à importação em massa com barra de progresso, estatísticas em tempo real e opções de configuração. Implementa feedback detalhado sobre o processo de importação e apresenta tooltips informativos posicionados adequadamente para evitar bloqueio de interações.
+- `ProductsList.tsx`: Componente de interface para gerenciamento de produtos, incluindo exclusão individual e em massa.
 
 **Status:** Atualizado
 

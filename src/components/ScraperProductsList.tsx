@@ -80,6 +80,8 @@ const ScraperProductsList = () => {
     lastError: null
   });
   const [importAllLoading, setImportAllLoading] = useState(false);
+  // Novo estado para controlar se as imagens devem ser baixadas
+  const [downloadImages, setDownloadImages] = useState(true);
 
   // Handler para lidar com erros de carregamento de imagens
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -325,7 +327,8 @@ const ScraperProductsList = () => {
       // Configurações padrão
       const config = {
         batchSize: 20,
-        delayBetweenBatches: 3000
+        delayBetweenBatches: 3000,
+        downloadImages: downloadImages // Passar a preferência do usuário
       };
       
       const response = await axios.post('http://localhost:3000/scraper/import-all-products', config);
@@ -333,14 +336,14 @@ const ScraperProductsList = () => {
       if (response.data && response.data.success) {
         toast.success('Importação em massa iniciada com sucesso!');
         setImportAllProgress(response.data.progress);
-        // Iniciar verificação contínua do status
+        // Iniciar verificação contínua do status - atualizar a cada 2 segundos para feedback mais rápido
         const statusCheckInterval = setInterval(async () => {
           if (importAllProgress.isRunning) {
             await fetchImportAllStatus();
           } else {
             clearInterval(statusCheckInterval);
           }
-        }, 5000);
+        }, 2000); // Reduzido de 5000 para 2000 ms para feedback mais frequente
       }
     } catch (error: any) {
       console.error('Erro ao iniciar importação em massa:', error);
@@ -458,35 +461,79 @@ const ScraperProductsList = () => {
               )}
             </div>
             
-            <div className="flex space-x-3">
-              {!importAllProgress.isRunning ? (
-                <button 
-                  onClick={startImportAllProducts}
-                  disabled={importAllLoading || autoImportStatus.isRunning}
-                  className={`py-2 px-4 rounded font-medium ${
-                    importAllLoading || autoImportStatus.isRunning
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                  }`}
-                >
-                  {importAllLoading ? 'Processando...' : 'Importar Todos os Produtos'}
-                </button>
-              ) : (
-                <button 
-                  onClick={cancelImportAllProducts}
-                  disabled={importAllLoading}
-                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded"
-                >
-                  {importAllLoading ? 'Processando...' : 'Cancelar Importação'}
-                </button>
+            <div className="flex flex-col space-y-3">
+              {/* Adicionar opção para baixar imagens */}
+              {!importAllProgress.isRunning && (
+                <div className="flex items-center mb-2">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={downloadImages}
+                      onChange={(e) => setDownloadImages(e.target.checked)}
+                      className="form-checkbox h-5 w-5 text-blue-600 rounded"
+                      disabled={importAllProgress.isRunning}
+                    />
+                    <span className="ml-2 text-gray-700">
+                      Baixar imagens localmente
+                    </span>
+                  </label>
+                  <div className="ml-2 group relative">
+                    <span className="cursor-help text-gray-400 hover:text-gray-600">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-sm text-white rounded-md absolute z-10 px-3 py-2 bottom-full left-1/2 transform -translate-x-1/2 mb-1 w-64 pointer-events-none">
+                      {downloadImages 
+                        ? "As imagens serão baixadas e armazenadas localmente. Isso garante que as imagens continuem disponíveis mesmo se a fonte original ficar indisponível."
+                        : "Serão usadas as URLs originais das imagens. Isso economiza espaço de armazenamento, mas depende da disponibilidade contínua do site de origem."}
+                    </div>
+                  </div>
+                </div>
               )}
+              
+              <div className="flex space-x-3">
+                {!importAllProgress.isRunning ? (
+                  <button 
+                    onClick={startImportAllProducts}
+                    disabled={importAllLoading || autoImportStatus.isRunning}
+                    className={`py-2 px-4 rounded font-medium ${
+                      importAllLoading || autoImportStatus.isRunning
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-green-600 hover:bg-green-700 text-white'
+                    }`}
+                  >
+                    {importAllLoading ? 'Processando...' : 'Importar Todos os Produtos'}
+                  </button>
+                ) : (
+                  <button 
+                    onClick={cancelImportAllProducts}
+                    disabled={importAllLoading}
+                    className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded"
+                  >
+                    {importAllLoading ? 'Processando...' : 'Cancelar Importação'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           
-          {/* Barra de progresso */}
-          {importAllProgress.isRunning && renderProgressBar(
-            importAllProgress.imported,
-            importAllProgress.estimatedTotal || importAllProgress.total || '∞'
+          {/* Barra de progresso melhorada com feedback em tempo real */}
+          {importAllProgress.isRunning && (
+            <div className="mt-4">
+              {renderProgressBar(
+                importAllProgress.imported,
+                importAllProgress.estimatedTotal || importAllProgress.total || '∞'
+              )}
+              <div className="flex justify-between mt-2 text-sm text-gray-600">
+                <span>Produtos encontrados: {importAllProgress.total}</span>
+                <span className="font-medium text-blue-600">
+                  Importados: {importAllProgress.imported} 
+                  {importAllProgress.estimate?.rate && ` (${importAllProgress.estimate.rate} produtos/segundo)`}
+                </span>
+                <span>Falhas: {importAllProgress.failed}</span>
+              </div>
+            </div>
           )}
           
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-4">

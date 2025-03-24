@@ -220,14 +220,88 @@ class ScraperController {
   }
 
   /**
+   * Exclui a imagem de um produto do sistema de arquivos
+   * @param {string} imagePath Caminho relativo da imagem a ser excluída
+   * @returns {Promise<boolean>} Resultado da operação
+   */
+  async deleteProductImage(imagePath) {
+    try {
+      // Ignorar se for uma imagem de placeholder ou URL externa
+      if (!imagePath || 
+          imagePath.startsWith('http') || 
+          imagePath === '/img/placeholder-product.jpg' ||
+          !imagePath.startsWith('/img/produtos/')) {
+        console.log('Imagem não precisa ser excluída:', imagePath);
+        return true;
+      }
+
+      // Obter caminho completo no sistema de arquivos
+      const fullPath = path.join(process.cwd(), 'public', imagePath);
+      
+      console.log('Tentando excluir imagem:', fullPath);
+
+      // Verificar se o arquivo existe
+      if (!fs.existsSync(fullPath)) {
+        console.log('Arquivo não encontrado:', fullPath);
+        return false;
+      }
+
+      // Excluir o arquivo
+      await fs.unlink(fullPath);
+      console.log('Imagem excluída com sucesso:', fullPath);
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir imagem:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Exclui todas as imagens associadas a um produto
+   * @param {Object} product Produto cujas imagens serão excluídas
+   * @returns {Promise<number>} Número de imagens excluídas
+   */
+  async deleteAllProductImages(product) {
+    let deletedCount = 0;
+    
+    try {
+      if (!product) return deletedCount;
+      
+      // Excluir imagem principal se existir
+      if (product.image) {
+        const success = await this.deleteProductImage(product.image);
+        if (success) deletedCount++;
+      }
+      
+      // Excluir todas as imagens do array images
+      if (product.images && Array.isArray(product.images)) {
+        for (const img of product.images) {
+          const imgUrl = typeof img === 'string' ? img : img.url;
+          if (imgUrl) {
+            const success = await this.deleteProductImage(imgUrl);
+            if (success) deletedCount++;
+          }
+        }
+      }
+      
+      return deletedCount;
+    } catch (error) {
+      console.error('Erro ao excluir imagens do produto:', error.message);
+      return deletedCount;
+    }
+  }
+
+  /**
    * Importa um produto para a loja
    * @param {Object} product Produto a ser importado
+   * @param {boolean} downloadImages Se deve baixar as imagens ou usar URLs originais (padrão: true)
    */
-  async importProductToStore(product) {
+  async importProductToStore(product, downloadImages = true) {
     try {
       console.log('Processando produto para importação:', {
         id: product.id,
-        title: product.title
+        title: product.title,
+        downloadImages: downloadImages ? 'Sim (baixar imagens)' : 'Não (usar URLs originais)'
       });
 
       // Garantir que temos os dados mínimos necessários
@@ -277,38 +351,57 @@ class ScraperController {
         // Armazenar as URLs originais para referência
         originalImages.push(...product.images);
         
-        // Processar e baixar cada imagem
+        // Processar cada imagem
         for (const img of product.images) {
-          // Se a imagem já é uma URL completa do apoioentrega, preservá-la e baixá-la
-          if (img.includes('apoioentrega.vteximg.com.br')) {
-            // Remover parâmetros da URL que podem causar problemas
-            const cleanUrl = img.split('?')[0];
-            
-            // Garantir que a URL use HTTP se não tiver protocolo
-            let fullUrl = cleanUrl;
-            if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
-              fullUrl = `http://${fullUrl}`;
+          // Se devemos baixar imagens
+          if (downloadImages) {
+            // Se a imagem já é uma URL completa do apoioentrega, preservá-la e baixá-la
+            if (img.includes('apoioentrega.vteximg.com.br')) {
+              // Remover parâmetros da URL que podem causar problemas
+              const cleanUrl = img.split('?')[0];
+              
+              // Garantir que a URL use HTTP se não tiver protocolo
+              let fullUrl = cleanUrl;
+              if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+                fullUrl = `http://${fullUrl}`;
+              }
+              
+              // Baixar e salvar a imagem localmente
+              const localPath = await this.downloadImage(fullUrl, product.id);
+              processedImages.push(localPath);
             }
-            
-            // Baixar e salvar a imagem localmente
-            const localPath = await this.downloadImage(fullUrl, product.id);
-            processedImages.push(localPath);
-          }
-          // Se a imagem já é uma URL completa de outra fonte, baixá-la
-          else if (img.startsWith('http://') || img.startsWith('https://')) {
-            const localPath = await this.downloadImage(img, product.id);
-            processedImages.push(localPath);
-          }
-          // Se é um caminho relativo do apoioentrega, construir a URL completa e baixá-la
-          else if (img.includes('/arquivos/') || img.includes('/ids/')) {
-            const baseUrl = 'http://apoioentrega.vteximg.com.br';
-            const fullUrl = `${baseUrl}${img.startsWith('/') ? '' : '/'}${img}`;
-            const localPath = await this.downloadImage(fullUrl, product.id);
-            processedImages.push(localPath);
-          }
-          // Para outros casos, usar o placeholder
-          else {
-            processedImages.push('/img/placeholder-product.jpg');
+            // Se a imagem já é uma URL completa de outra fonte, baixá-la
+            else if (img.startsWith('http://') || img.startsWith('https://')) {
+              const localPath = await this.downloadImage(img, product.id);
+              processedImages.push(localPath);
+            }
+            // Se é um caminho relativo do apoioentrega, construir a URL completa e baixá-la
+            else if (img.includes('/arquivos/') || img.includes('/ids/')) {
+              const baseUrl = 'http://apoioentrega.vteximg.com.br';
+              const fullUrl = `${baseUrl}${img.startsWith('/') ? '' : '/'}${img}`;
+              const localPath = await this.downloadImage(fullUrl, product.id);
+              processedImages.push(localPath);
+            }
+            // Para outros casos, usar o placeholder
+            else {
+              processedImages.push('/img/placeholder-product.jpg');
+            }
+          } else {
+            // Usar URLs originais sem baixar (novo comportamento)
+            // Se a imagem já é uma URL completa, usá-la diretamente
+            if (img.startsWith('http://') || img.startsWith('https://')) {
+              processedImages.push(img);
+            }
+            // Se é um caminho relativo do apoioentrega, construir a URL completa
+            else if (img.includes('/arquivos/') || img.includes('/ids/')) {
+              const baseUrl = 'http://apoioentrega.vteximg.com.br';
+              const fullUrl = `${baseUrl}${img.startsWith('/') ? '' : '/'}${img}`;
+              processedImages.push(fullUrl);
+            }
+            // Para outros casos, usar o placeholder
+            else {
+              processedImages.push('/img/placeholder-product.jpg');
+            }
           }
         }
       }
@@ -333,7 +426,8 @@ class ScraperController {
         // Campos adicionais para rastreamento
         originalId: product.id,
         originalImages: originalImages, // Preservar URLs originais
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
+        downloadedImages: downloadImages // Informar se as imagens foram baixadas
       };
 
       // Validar o produto processado
@@ -351,7 +445,8 @@ class ScraperController {
       console.log('Produto processado com sucesso:', {
         id: systemProduct.id,
         title: systemProduct.title,
-        imagesCount: systemProduct.images.length
+        imagesCount: systemProduct.images.length,
+        downloadedImages: downloadImages
       });
 
       // Salvar o produto no banco de dados
@@ -699,9 +794,10 @@ class ScraperController {
    * Importar todos os produtos disponíveis na API gradualmente
    * @param {number} batchSize Tamanho do lote de produtos por vez (padrão: 20)
    * @param {number} delayBetweenBatches Atraso em ms entre lotes (padrão: 3000)
+   * @param {boolean} downloadImages Se deve baixar as imagens ou usar URLs originais (padrão: true)
    * @returns {Promise<Object>} Objeto com estatísticas da importação
    */
-  async importAllProducts(batchSize = 20, delayBetweenBatches = 3000) {
+  async importAllProducts(batchSize = 20, delayBetweenBatches = 3000, downloadImages = true) {
     try {
       // Verificar se já está em execução
       if (this.importProgress.isRunning) {
@@ -721,10 +817,11 @@ class ScraperController {
         lastError: null,
         batchSize,
         currentBatch: 0,
-        estimatedTotal: '∞' // Inicialmente desconhecido
+        estimatedTotal: '∞', // Inicialmente desconhecido
+        downloadImages, // Armazenar a configuração de download
       };
 
-      console.log('Iniciando importação em massa de produtos...');
+      console.log(`Iniciando importação em massa de produtos (download de imagens: ${downloadImages ? 'Sim' : 'Não'})...`);
       
       let allProducts = [];
       let currentPage = 0;
@@ -845,9 +942,9 @@ class ScraperController {
                 continue;
               }
               
-              // Importar o produto
-              console.log(`Importando produto ${product.id}: ${product.title}...`);
-              const result = await this.importProductToStore(product);
+              // Importar o produto com a configuração de download
+              console.log(`Importando produto ${product.id}: ${product.title}... (download: ${downloadImages ? 'Sim' : 'Não'})`);
+              const result = await this.importProductToStore(product, downloadImages);
               
               if (result && result.id) {
                 console.log(`Produto ${product.id} importado com sucesso como ${result.id}`);
@@ -913,6 +1010,7 @@ class ScraperController {
       console.log(`Total de produtos: ${this.importProgress.total}`);
       console.log(`Produtos importados: ${this.importProgress.imported}`);
       console.log(`Produtos com erro: ${this.importProgress.failed}`);
+      console.log(`Download de imagens: ${downloadImages ? 'Sim' : 'Não'}`);
       
       return this.importProgress;
     } catch (error) {
@@ -1115,6 +1213,90 @@ class ScraperController {
       }
     });
 
+    // Rota para excluir um produto (com suas imagens)
+    router.delete('/api/delete-product/:id', async (req, res) => {
+      try {
+        const { id } = req.params;
+        
+        // Obter detalhes do produto para excluir suas imagens
+        const existingProductsResponse = await axios.get(`http://localhost:3000/products/${id}`);
+        const product = existingProductsResponse.data;
+        
+        if (!product) {
+          return res.status(404).json({
+            success: false,
+            message: 'Produto não encontrado'
+          });
+        }
+        
+        // Excluir as imagens associadas ao produto
+        const deletedImagesCount = await this.deleteAllProductImages(product);
+        
+        // Excluir o produto do banco de dados
+        await axios.delete(`http://localhost:3000/products/${id}`);
+        
+        res.json({
+          success: true,
+          message: `Produto excluído com sucesso. ${deletedImagesCount} imagens foram removidas.`
+        });
+      } catch (error) {
+        console.error('Erro ao excluir produto:', error.message);
+        res.status(500).json({
+          success: false,
+          message: `Erro ao excluir produto: ${error.message}`
+        });
+      }
+    });
+
+    // Rota para excluir todos os produtos
+    router.delete('/api/delete-all-products', async (req, res) => {
+      try {
+        // Obter todos os produtos
+        const productsResponse = await axios.get('http://localhost:3000/products');
+        const products = productsResponse.data;
+        
+        console.log(`Preparando para excluir ${products.length} produtos`);
+        
+        // Contadores para estatísticas
+        let deletedProducts = 0;
+        let deletedImages = 0;
+        
+        // Excluir cada produto e suas imagens
+        for (const product of products) {
+          try {
+            // Excluir imagens associadas ao produto
+            const imagesDeleted = await this.deleteAllProductImages(product);
+            deletedImages += imagesDeleted;
+            
+            // Excluir o produto do banco de dados
+            await axios.delete(`http://localhost:3000/products/${product.id}`);
+            deletedProducts++;
+            
+            console.log(`Produto ${product.id} excluído com ${imagesDeleted} imagens`);
+          } catch (productError) {
+            console.error(`Erro ao excluir produto ${product.id}:`, productError.message);
+            // Continuar com o próximo produto mesmo se houver erro
+          }
+        }
+        
+        res.json({
+          success: true,
+          message: `${deletedProducts} produtos excluídos com sucesso. ${deletedImages} imagens foram removidas.`,
+          stats: {
+            totalProducts: products.length,
+            deletedProducts,
+            deletedImages
+          }
+        });
+      } catch (error) {
+        console.error('Erro ao excluir todos os produtos:', error.message);
+        res.status(500).json({
+          success: false,
+          message: `Erro ao excluir todos os produtos: ${error.message}`
+        });
+      }
+    });
+
     // Rota para iniciar importação automática
     router.post('/scraper/auto-import/start', (req, res) => {
       this.startAutoImport();
@@ -1172,17 +1354,21 @@ class ScraperController {
         }
         
         // Obter parâmetros da requisição
-        const { batchSize = 20, delayBetweenBatches = 3000 } = req.body;
+        const { 
+          batchSize = 20, 
+          delayBetweenBatches = 3000, 
+          downloadImages = true 
+        } = req.body;
         
         // Iniciar a importação em um processo separado para não bloquear a resposta
         res.status(202).json({
           success: true,
-          message: 'Importação em massa iniciada',
+          message: `Importação em massa iniciada (download de imagens: ${downloadImages ? 'Sim' : 'Não'})`,
           progress: this.getImportAllStatus()
         });
         
         // Iniciar o processo de importação em massa
-        this.importAllProducts(batchSize, delayBetweenBatches).catch(error => {
+        this.importAllProducts(batchSize, delayBetweenBatches, downloadImages).catch(error => {
           console.error('Erro na importação em massa:', error);
         });
       } catch (error) {

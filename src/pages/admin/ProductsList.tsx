@@ -103,11 +103,32 @@ const ProductsList = () => {
   const handleDeleteProduct = async (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este produto?')) {
       try {
-        await customFetch.delete(`/products/${id}`);
+        await customFetch.delete(`/api/delete-product/${id}`);
         setProducts(products.filter(product => product.id !== id));
         toast.success('Produto excluído com sucesso');
       } catch (error) {
         toast.error('Falha ao excluir produto');
+      }
+    }
+  };
+
+  const handleDeleteAllProducts = async () => {
+    if (window.confirm('ATENÇÃO: Tem certeza que deseja excluir TODOS os produtos? Esta ação não pode ser desfeita!')) {
+      try {
+        setIsLoading(true);
+        const response = await customFetch.delete('/api/delete-all-products');
+        
+        if (response.data.success) {
+          setProducts([]);
+          toast.success(response.data.message);
+        } else {
+          throw new Error('Falha ao excluir produtos');
+        }
+      } catch (error) {
+        toast.error('Falha ao excluir todos os produtos');
+        console.error('Erro ao excluir produtos:', error);
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -163,12 +184,21 @@ const ProductsList = () => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Produtos</h2>
-        <Link 
-          to="/admin/products/new" 
-          className="bg-secondaryBrown text-white px-4 py-2 rounded-md flex items-center hover:bg-opacity-90 transition-colors"
-        >
-          <HiPlus className="mr-2" /> Adicionar Produto
-        </Link>
+        <div className="flex gap-2">
+          <button
+            onClick={handleDeleteAllProducts}
+            className="bg-red-600 text-white px-4 py-2 rounded-md flex items-center hover:bg-red-700 transition-colors"
+            title="Atenção: Esta ação excluirá todos os produtos"
+          >
+            <HiTrash className="mr-2" /> Excluir Todos os Produtos
+          </button>
+          <Link 
+            to="/admin/products/new" 
+            className="bg-secondaryBrown text-white px-4 py-2 rounded-md flex items-center hover:bg-opacity-90 transition-colors"
+          >
+            <HiPlus className="mr-2" /> Adicionar Produto
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
